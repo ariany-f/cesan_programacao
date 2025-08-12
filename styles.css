@@ -1,0 +1,317 @@
+/* ===== ESTILOS GERAIS DA PÁGINA ===== */
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background-color: #f5f7fa;
+    margin: 0;
+    padding: 15px;
+    color: #3a3a3a;
+    line-height: 1.4;
+    font-size: 17.6px; /* 16px + 10% */
+}
+
+.container {
+    max-width: 100%;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    padding: 0 0 8px 0;
+    color: #2c3e50;
+    border-bottom: 1px solid #eaeef2;
+}
+
+h2 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 16px 0 8px 0;
+    color: #34495e;
+}
+
+.presto-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 12px;
+    color: #666;
+    font-weight: 500;
+    padding: 8px 0;
+    border-bottom: 1px dashed #e0e0e0;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 16px 0;
+}
+
+.task-counter {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    margin: 12px 0;
+    display: inline-block;
+}
+
+.task-counter strong {
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+/* Botões */
+.action-btn {
+    padding: 6px 8px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #3498db;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 50px;
+}
+
+.action-btn:hover {
+    background-color: lightgrey;
+    font-size: 12px;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.transfer-btn {
+    margin-bottom: 16px;
+    background: #1976d2;
+    color: #fff;
+    font-weight: 600;
+}
+
+.transfer-btn:hover {
+    background: #1256a3;
+}
+
+.transfer-btn:disabled {
+    background-color: #e0e0e0;
+    color: #666;
+}
+
+/* Status */
+.status-badge {
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 10px;
+    display: inline-block;
+    text-align: center;
+    min-width: 80px;
+}
+
+.status-badge.baixada_no_siscom, .status-badge.retornada_de_campo {
+    background-color: #e8f8f5;
+    color: #27ae60;
+}
+
+.status-badge.em_campo, .status-badge.duplicada {
+    background-color: #fef9e7;
+    color: #f39c12;
+}
+
+.status-badge.pendente_de_envio_para_campo {
+    background-color: #e8f0f8;
+    color: #2768ae;
+}
+
+.status-badge.cancelada, .status-badge.rejeitada {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Responsividade */
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .action-btn {
+        padding: 3px 8px;
+        font-size: 10px;
+        min-width: 40px;
+    }
+    .fullpage-loader-bg {
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 30vh;
+    }
+    .fullpage-loader {
+        min-width: 90vw;
+        min-height: 30vh;
+    }
+    .fullpage-loader .dt-loader {
+        width: 54px;
+        height: 54px;
+        border-width: 7px;
+        margin-bottom: 18px;
+    }
+    .fullpage-loader span {
+        font-size: 20px;
+    }
+}
+
+/* ===== MODAIS CUSTOMIZADOS ===== */
+.custom-modal-bg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(30, 41, 59, 0.18);
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+    transition: opacity 0.2s;
+}
+.custom-modal-box {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(30,41,59,0.18), 0 1.5px 8px #0001;
+    min-width: 280px;
+    max-width: 95vw;
+    padding: 28px 22px 18px 22px;
+    position: relative;
+    animation: modalIn 0.22s cubic-bezier(.4,1.4,.6,1) 1;
+}
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+}
+.custom-modal-box h3 {
+    font-size: 17px;
+    margin: 0 0 14px 0;
+    color: #1976d2;
+    font-weight: 600;
+}
+.custom-modal-box input,
+.custom-modal-box select {
+    width: 100%;
+    padding: 9px 8px;
+    font-size: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    background: #f8fafc;
+    color: #2c3e50;
+    transition: border 0.2s;
+}
+.custom-modal-box input:focus,
+.custom-modal-box select:focus {
+    border-color: #1976d2;
+    outline: none;
+}
+.custom-modal-actions {
+    text-align: right;
+}
+.custom-modal-actions button {
+    padding: 7px 18px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    margin-left: 6px;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+.custom-modal-actions .cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+.custom-modal-actions .cancel:hover {
+    background: #e5e7eb;
+}
+.custom-modal-actions .confirm {
+    background: #1976d2;
+    color: #fff;
+}
+.custom-modal-actions .confirm:hover {
+    background: #1256a3;
+}
+
+#filter-row th {
+    cursor: default !important;
+}
+
+#filter-row input {
+    cursor: text !important;
+}
+
+#filter-row th:hover {
+    background-color: transparent !important;
+}
+
+.header-row th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.filter-row th {
+    padding: 6px 8px;
+    background: #f8f9fa;
+    border-bottom: 1.5px solid #e0e0e0;
+    vertical-align: middle;
+}
+
+.filter-row input,
+.filter-row select {
+    display: block;
+    width: 100%;
+    min-width: 80px;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    font-size: 15px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    background: #fff;
+    color: #2c3e50;
+    margin: 0;
+    outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+.filter-row input:focus,
+.filter-row select:focus {
+    border-color: #1976d2;
+    box-shadow: 0 0 0 0.15rem rgba(25,118,210,0.12);
+}
+
+.filter-row input::placeholder {
+    color: #b0b8c1;
+    font-size: 14px;
+}
+
+/* ===== ESTILOS PARA BOTÕES DE ITENS ===== */
+.action-btn.incluir-itens.com-itens {
+    background: #1976d2 !important;
+    border-color: #1565c0 !important;
+    color: white !important;
+    font-weight: 600 !important;
+    min-width: 40px !important;
+}
+
+.action-btn.incluir-itens.com-itens:hover {
+    background: #1565c0 !important;
+    border-color: #0d47a1 !important;
+}
+
+.action-btn.incluir-itens.com-itens i {
+    color: white !important;
+    margin-right: 2px !important;
+}

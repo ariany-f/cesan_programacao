@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CESAN - Painel de Controle</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #0066cc 0%, #004499 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0, 102, 204, 0.15);
+            padding: 40px;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .logo {
+            margin-bottom: 30px;
+        }
+        
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #0066cc;
+            margin: 0;
+            letter-spacing: -1px;
+        }
+        
+        .logo-subtitle {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+            font-weight: 300;
+        }
+        
+        .clock {
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: #666;
+            margin-bottom: 15px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .date {
+            font-size: 1rem;
+            color: #999;
+            margin-bottom: 30px;
+            font-weight: 400;
+        }
+        
+        .btn {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 18px 36px;
+            font-size: 1.2rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 102, 204, 0.3);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+        }
+        
+        .btn::after {
+            content: "↗";
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .btn:hover {
+            background: #0052a3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 102, 204, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            background: #004499;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 1rem;
+            font-weight: 400;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <p class="subtitle">Sistema de Gerenciamento de Tarefas</p>
+        
+        <button class="btn" onclick="openDataPage()">
+            Abrir Gestão de Tarefas
+        </button>
+
+        <p style="margin-top: 10px; font-size: 0.8rem; color: #666; font-style: italic;margin-bottom: 20px;">
+            ⚠️ Será aberto em uma nova guia do navegador
+        </p>
+        
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="date" id="date">01/01/2024</div>
+    </div>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            
+            // Atualiza o relógio
+            const timeString = now.toLocaleTimeString('pt-BR', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('clock').textContent = timeString;
+            
+            // Atualiza a data
+            const dateString = now.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            document.getElementById('date').textContent = dateString;
+        }
+        
+        function openDataPage() {
+            window.open('data.html', '_blank');
+        }
+        
+        // Atualiza o tempo a cada segundo
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+</html>
