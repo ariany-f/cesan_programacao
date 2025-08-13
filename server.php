@@ -11,24 +11,24 @@ $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
 
 // Mapeamento de nomes do DataTables para nomes reais do banco
 $colMap = [
-    'quem' => 'age_name',
-    'ss' => 'loc_integrationid',
-    'localizacao' => 'loc_description',
+    'quem' => 'a.age_name',
+    'ss' => 'l.loc_integrationid',
+    'localizacao' => 'l.loc_description',
     'cidade' => 'l.e_localidade',
     'bairro' => 'l.e_bairro',
     'setor' => 'l.e_setor',
-    'recepcionado' => 'tsk_datetimeinsert',
-    'ultima_atividade' => 'tsk_lastexecutiondatehour',
-    'situacao' => 'tsk_situation',
-    'tarefa' => 'tsk_id',
-    'prioridade' => 'tsk_priority',
-    'servico' => 'tty_description',
-    'tags' => 'e_tag',
-    'status_integracao' => 'e_situacao'
+    'recepcionado' => 'l.e_dataregistro',
+    'ultima_atividade' => 't.tsk_lastexecutiondatehour',
+    'situacao' => 't.tsk_situation',
+    'tarefa' => 't.tsk_id',
+    'prioridade' => 't.tsk_priority',
+    'servico' => 'tt.tty_description',
+    'tags' => 'l.e_tag',
+    'status_integracao' => 'l.e_situacao'
 ];
 
-// Colunas que precisam de CAST para texto
-$castCols = ['tsk_id', 'tsk_priority'];
+// Colunas que precisam de CAST para texto (usando os nomes do colMap)
+$castCols = ['t.tsk_id', 't.tsk_priority', 'l.loc_integrationid'];
 
 // Proteção: só permite ordenar por colunas conhecidas
 $allowedCols = array_keys($colMap);
@@ -42,8 +42,8 @@ if (!empty($_POST['order']) && isset($_POST['columns'])) {
     $colName = $columns[$orderColIdx]['data'];
     if (in_array($colName, $allowedCols)) {
         $dbCol = $colMap[$colName];
-        // Para campos l.e_bairro, l.e_localidade, l.e_setor, não usar aspas
-        if (in_array($dbCol, ['l.e_bairro', 'l.e_localidade', 'l.e_setor'])) {
+        // Para campos com prefixo de tabela, não usar aspas
+        if (strpos($dbCol, '.') !== false) {
             $orderBy = "ORDER BY $dbCol $orderDir";
         } else {
             $orderBy = "ORDER BY \"$dbCol\" $orderDir";
@@ -52,8 +52,6 @@ if (!empty($_POST['order']) && isset($_POST['columns'])) {
 }
 if($orderBy == ''){
     $orderBy = 'ORDER BY t.tsk_datetimeinsert DESC';
-} else { 
-    $orderBy .= ', t.tsk_datetimeinsert DESC';
 }
 
 // Filtros por coluna
@@ -62,20 +60,14 @@ $params = [];
 
 // Inicializa o filtro de cidade da CTE
 $cidadesAtivas = getCidadesAtivas();
+// Inicializa o filtro de cidade da CTE
 $cidadeWhereCTE = getCidadeWhereCondition('u44280.dbout_tmp_local2');
 
-// Adiciona o filtro fixo e_situacao IS NULL na CTE
-if ($cidadeWhereCTE) {
-    $cidadeWhereCTE .= " AND dbout_tmp_local2.e_situacao IS NULL";
-} else {
-    $cidadeWhereCTE = "dbout_tmp_local2.e_situacao IS NULL";
-}
-
-// Filtro fixo para situação baseado na configuração
-$situacaoWhere = getSituacaoWhereCondition('t');
-if ($situacaoWhere) {
-    $where[] = $situacaoWhere;
-}
+// Filtro fixo para situação baseado na configuração - REMOVIDO para permitir filtro livre no frontend
+// $situacaoWhere = getSituacaoWhereCondition('t');
+// if ($situacaoWhere) {
+//     $where[] = $situacaoWhere;
+// }
 
 // Filtro fixo para cidade baseado na configuração - REMOVIDO pois já é aplicado na CTE
 // $cidadeWhere = getCidadeWhereCondition();
@@ -151,6 +143,31 @@ if (isset($_GET['cidades'])) {
         }
         
         echo json_encode($cidades, JSON_UNESCAPED_UNICODE);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Endpoint para buscar situações
+if (isset($_GET['situacoes'])) {
+    try {
+        $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+        
+        // Busca todas as situações distintas disponíveis no banco
+        $sql = "SELECT DISTINCT tsk_situation as situacao 
+                FROM u44280.task 
+                WHERE tsk_situation IS NOT NULL 
+                AND tsk_situation != '' 
+                ORDER BY tsk_situation ASC";
+        
+        $stmt = $pdo->query($sql);
+        $situacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode($situacoes, JSON_UNESCAPED_UNICODE);
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
@@ -293,6 +310,101 @@ if (isset($_POST['excluir_item'])) {
     exit;
 }
 
+// Endpoint para atualizar status na tabela dbout_tmp_local2
+if (isset($_POST['atualizar_status'])) {
+    try {
+        $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+        
+        $locId = $_POST['loc_id'];
+        $novoStatus = $_POST['novo_status'];
+        
+        // Atualiza o status na tabela dbout_tmp_local2
+        $sql = "UPDATE u44280.dbout_tmp_local2 
+                SET e_situacao = :novo_status 
+                WHERE loc_id = :loc_id";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':novo_status', $novoStatus);
+        $stmt->bindValue(':loc_id', $locId);
+        $stmt->execute();
+        
+        if ($stmt->rowCount() > 0) {
+            // Busca os dados atualizados para retornar
+            $sqlSelect = "SELECT e_situacao FROM u44280.dbout_tmp_local2 WHERE loc_id = :loc_id";
+            $stmtSelect = $pdo->prepare($sqlSelect);
+            $stmtSelect->bindValue(':loc_id', $locId);
+            $stmtSelect->execute();
+            $dadosAtualizados = $stmtSelect->fetch(PDO::FETCH_ASSOC);
+            
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Status atualizado na base de dados com sucesso!',
+                'dados_atualizados' => $dadosAtualizados
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Registro não encontrado']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Erro ao atualizar status: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
+// Endpoint para atualizar tags na tabela dbout_tmp_local2
+if (isset($_POST['atualizar_tags'])) {
+    try {
+        $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+        
+        $locId = $_POST['loc_id'];
+        $novaTag = $_POST['nova_tag'];
+        
+        // Busca as tags atuais
+        $sqlSelect = "SELECT e_tag FROM u44280.dbout_tmp_local2 WHERE loc_id = :loc_id";
+        $stmtSelect = $pdo->prepare($sqlSelect);
+        $stmtSelect->bindValue(':loc_id', $locId);
+        $stmtSelect->execute();
+        $tagsAtuais = $stmtSelect->fetchColumn();
+        
+        // Concatena a nova tag com as existentes
+        $tagsArray = $tagsAtuais ? explode(',', $tagsAtuais) : [];
+        if (!in_array($novaTag, $tagsArray)) {
+            $tagsArray[] = $novaTag;
+        }
+        $tagsConcatenadas = implode(',', $tagsArray);
+        
+        // Atualiza as tags na tabela dbout_tmp_local2
+        $sql = "UPDATE u44280.dbout_tmp_local2 
+                SET e_tag = :tags 
+                WHERE loc_id = :loc_id";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':tags', $tagsConcatenadas);
+        $stmt->bindValue(':loc_id', $locId);
+        $stmt->execute();
+        
+        if ($stmt->rowCount() > 0) {
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Tag adicionada na base de dados com sucesso!',
+                'dados_atualizados' => ['e_tag' => $tagsConcatenadas]
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Registro não encontrado']);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Erro ao atualizar tags: ' . $e->getMessage()]);
+    }
+    exit;
+}
+
 try {
     $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -376,7 +488,7 @@ SELECT
     t.tsk_priority as "prioridade",
     COALESCE(COUNT(m.ID), 0) AS "numero_itens"
 FROM u44280.task AS t
-INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id AND l.e_situacao IS NULL
+INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
 LEFT JOIN u44280.dbout_agent AS a ON t.age_id = a.age_id
 INNER JOIN u44280.tasktype AS tt ON tt.tty_id = t.tty_id
 LEFT JOIN MaterialSS AS m ON m.NumeroSS = l.loc_integrationid
@@ -397,13 +509,8 @@ SQL;
     // Adiciona GROUP BY para o contador de itens
     $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_situacao, t.tsk_priority, t.tsk_accesstoken";
 
-    // Ordenação otimizada - usa índices se possível
-    if (strpos($orderBy, 'tsk_datetimeinsert') !== false) {
-        // Se ordenar por data de inserção, usa índice
-        $sql .= "\nORDER BY t.tsk_datetimeinsert DESC, t.tss_id ASC";
-    } else {
-        $sql .= "\n$orderBy";
-    }
+    // Aplica a ordenação solicitada pelo usuário
+    $sql .= "\n$orderBy";
     
     $sql .= "\nLIMIT :length OFFSET :start";
     
@@ -432,7 +539,14 @@ SQL;
         'cidades_filtro' => getCidadesAtivas(),
         'sistema_nome' => $SISTEMA_CONFIG['nome'],
         'params' => $params,
-        'order_by' => $orderBy
+        'order_by' => $orderBy,
+        'debug_order' => [
+            'post_order' => $_POST['order'] ?? null,
+            'order_col_idx' => isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : null,
+            'order_dir' => isset($_POST['order'][0]['dir']) ? $_POST['order'][0]['dir'] : null,
+            'col_name' => isset($_POST['columns'][intval($_POST['order'][0]['column'] ?? 0)]['data']) ? $_POST['columns'][intval($_POST['order'][0]['column'] ?? 0)]['data'] : null,
+            'allowed_cols' => $allowedCols
+        ]
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

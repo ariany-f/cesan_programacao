@@ -273,7 +273,23 @@ $(document).ready(function() {
                     // Limpa a célula
                     $(this).empty();
                     let input;
-                    if (i === 9) { // Status de Integração
+                    if (i === 8) { // Situação (dropdown)
+                        input = $('<select class="form-control situacao-select" style="width: 100%"></select>');
+                        input.append(`<option value=''>Filtrar</option>`);
+                        // Carrega todas as situações disponíveis no banco
+                        fetch('server.php?situacoes=1')
+                            .then(response => response.json())
+                            .then(situacoes => {
+                                situacoes.forEach(situacao => {
+                                    const option = `<option value='${situacao.situacao}'>${situacao.situacao}</option>`;
+                                    input.append(option);
+                                });
+                                input.show();
+                            })
+                            .catch(error => {
+                                // Erro silencioso ao carregar situações
+                            });
+                    } else if (i === 9) { // Status de Integração
                         input = $('<select class="form-control" style="width: 100%"></select>');
                         opcoesStatus.forEach(opt => {
                             input.append(`<option value='${opt}'>${opt || 'Filtrar'}</option>`);
@@ -334,6 +350,14 @@ $(document).ready(function() {
                             }
                         });
                     } else if (colIdx === 3) { // Cidade (filtro específico)
+                        input.on('change', function() {
+                            const value = this.value.trim();
+                            if (value !== lastValue) {
+                                lastValue = value;
+                                column.search(value).draw();
+                            }
+                        });
+                    } else if (colIdx === 8) { // Situação (filtro específico)
                         input.on('change', function() {
                             const value = this.value.trim();
                             if (value !== lastValue) {
@@ -518,7 +542,29 @@ $(document).ready(function() {
             const rowData = table.row(rowIdx).data();
             rowData.situacao = newStatus;
             rowData.situacao_texto = newStatusTexto;
-            table.row(rowIdx).data(rowData).draw();
+            
+            // Atualiza também o status de integração com o mesmo valor
+            rowData.status_integracao = newStatus;
+            
+            // Debug: log para verificar se está atualizando
+            console.log('Antes da atualização:', {
+                tarefa: rowData.tarefa,
+                situacao: rowData.situacao,
+                status_integracao: rowData.status_integracao
+            });
+            
+            // Atualiza também o status de integração com o mesmo valor
+            rowData.status_integracao = newStatus;
+            
+            console.log('Depois da atualização:', {
+                tarefa: rowData.tarefa,
+                situacao: rowData.situacao,
+                status_integracao: rowData.status_integracao,
+                loc_id: rowData.loc_id
+            });
+            
+            // Força o redesenho da tabela
+            table.row(rowIdx).data(rowData).draw(false);
             $('#statusModal').fadeOut(180);
 
             // Monta o XML
@@ -550,7 +596,37 @@ $(document).ready(function() {
                 }
                 
                 if (response.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
-                    showToast('Status alterado e XML enviado com sucesso!', 'success');
+                    // Atualiza também na tabela dbout_tmp_local2
+                    try {
+                        const updateFormData = new FormData();
+                        updateFormData.append('atualizar_status', '1');
+                        updateFormData.append('loc_id', rowData.loc_id);
+                        updateFormData.append('novo_status', newStatus);
+                        
+                        const updateResponse = await fetch('server.php', {
+                            method: 'POST',
+                            body: updateFormData
+                        });
+                        
+                        const updateResult = await updateResponse.json();
+                        
+                        if (updateResult.success) {
+                            showToast('Status atualizado com sucesso na base de dados!', 'success');
+                            
+                            // Atualiza a linha com os dados corretos do banco
+                            if (updateResult.dados_atualizados) {
+                                console.log('Dados atualizados do banco:', updateResult.dados_atualizados);
+                                rowData.status_integracao = updateResult.dados_atualizados.e_situacao;
+                                table.row(rowIdx).data(rowData).draw(false);
+                                console.log('Linha atualizada com novo status_integracao:', rowData.status_integracao);
+                            }
+                        } else {
+                            showToast('Status alterado, mas erro ao atualizar na base de dados.', 'error');
+                        }
+                    } catch (updateError) {
+                        console.error('Erro ao atualizar na base de dados:', updateError);
+                        showToast('Status alterado, mas erro ao atualizar na base de dados.', 'error');
+                    }
                 } else {
                     showToast('Status alterado, mas houve erro ao enviar o XML.', 'error');
                 }
@@ -659,7 +735,37 @@ $(document).ready(function() {
                     }
                     
                     if (postResp.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
-                        showToast('Tag adicionada e XML enviado com sucesso!', 'success');
+                        // Atualiza também na tabela dbout_tmp_local2
+                        try {
+                            const updateFormData = new FormData();
+                            updateFormData.append('atualizar_tags', '1');
+                            updateFormData.append('loc_id', rowData.loc_id);
+                            updateFormData.append('nova_tag', tag);
+                            
+                            const updateResponse = await fetch('server.php', {
+                                method: 'POST',
+                                body: updateFormData
+                            });
+                            
+                            const updateResult = await updateResponse.json();
+                            
+                            if (updateResult.success) {
+                                showToast('Tag adicionada com sucesso na base de dados!', 'success');
+                                
+                                // Atualiza a linha com os dados corretos do banco
+                                if (updateResult.dados_atualizados) {
+                                    console.log('Tags atualizadas do banco:', updateResult.dados_atualizados);
+                                    rowData.tags = updateResult.dados_atualizados.e_tag;
+                                    table.row(rowIdx).data(rowData).draw(false);
+                                    console.log('Linha atualizada com novas tags:', rowData.tags);
+                                }
+                            } else {
+                                showToast('Tag adicionada, mas erro ao atualizar na base de dados.', 'error');
+                            }
+                        } catch (updateError) {
+                            console.error('Erro ao atualizar tags na base de dados:', updateError);
+                            showToast('Tag adicionada, mas erro ao atualizar na base de dados.', 'error');
+                        }
                     } else {
                         showToast('Tag adicionada, mas houve erro ao enviar o XML.', 'error');
                     }
@@ -829,17 +935,17 @@ $(document).ready(function() {
     // Evento do botão de limpar filtros
     $(document).on('click', '#btnClearFilters', function() {
         const table = $('#tasksTable').DataTable();
-        // Limpa filtros globais e de coluna (exceto cidade)
+        // Limpa filtros globais e de coluna (exceto cidade e situação)
         table.search('');
         table.columns().every(function(colIdx) {
-            if (colIdx !== 3) { // Não limpa o filtro da coluna cidade (índice 3)
+            if (colIdx !== 3 && colIdx !== 8) { // Não limpa o filtro da coluna cidade (índice 3) e situação (índice 8)
                 this.search('');
             }
         });
-        // Limpa inputs, selects e datepickers (exceto cidade)
+        // Limpa inputs, selects e datepickers (exceto cidade e situação)
         $('.filter-row input, .filter-row select').each(function() {
             const colIdx = $(this).closest('th').index();
-            if (colIdx !== 3) { // Não limpa o select de cidade
+            if (colIdx !== 3 && colIdx !== 8) { // Não limpa o select de cidade e situação
                 if ($(this).is('select')) {
                     $(this).val('');
                 } else {
@@ -856,7 +962,7 @@ $(document).ready(function() {
             $tbody.data('filterRow', $filterRow);
         }
         
-        table.draw(false); // Redesenha sem perder paginação
+        table.draw(false); // Redesenha sem perder paginação (mantém filtros de cidade e situação)
         
         // Após o draw, garante que a linha de filtro está presente
         setTimeout(function() {

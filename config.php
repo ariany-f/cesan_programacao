@@ -8,9 +8,8 @@
 $CIDADE_CONFIG = 'VILA_VELHA'; // Mude para 'VILA_VELHA' se necessário
 
 // CONFIGURAÇÃO DE SITUAÇÃO
-// Defina aqui qual situação deve ser filtrada
-// Opções: 'RETORNADA_DE_CAMPO', 'EM_CAMPO_PENDENTE'
-$SITUACAO_CONFIG = 'EM_CAMPO_PENDENTE'; // Mude para 'RETORNADA_DE_CAMPO' se necessário
+// REMOVIDO: Filtro pré-fixado de situação - agora filtrado livremente no frontend
+// $SITUACAO_CONFIG = 'RETORNADA_DE_CAMPO'; // Comentado para permitir filtro livre
 
 // Mapeamento de configurações para cidades
 $CIDADES_FILTRO = [
@@ -19,7 +18,7 @@ $CIDADES_FILTRO = [
     'GUARAPARI' => ['ANCHIETA', 'GUARAPARI', 'PIUMA']
 ];
 
-// Mapeamento de configurações para situações
+// Mapeamento de configurações para situações (mantido para referência futura)
 $SITUACOES_FILTRO = [
     'RETORNADA_DE_CAMPO' => ['RETORNADA DE CAMPO'],
     'EM_CAMPO_PENDENTE' => ['EM CAMPO', 'PENDENTE DE ENVIO PARA CAMPO']
@@ -39,7 +38,7 @@ $SISTEMA_CONFIG = [
     'nome' => 'Sistema de Tarefas - ' . $CIDADE_CONFIG,
     'versao' => '1.0.0',
     'cidades' => $CIDADES_FILTRO[$CIDADE_CONFIG] ?? [],
-    'situacao' => $SITUACOES_FILTRO[$SITUACAO_CONFIG] ?? []
+    'situacao' => [] // Removido filtro pré-fixado de situação
 ];
 
 // Função para obter a string de conexão
@@ -54,10 +53,10 @@ function getCidadesAtivas() {
     return $CIDADES_FILTRO[$CIDADE_CONFIG] ?? [];
 }
 
-// Função para obter as situações ativas
+// Função para obter as situações ativas (desabilitada - filtro livre no frontend)
 function getSituacoesAtivas() {
-    global $SITUACOES_FILTRO, $SITUACAO_CONFIG;
-    return $SITUACOES_FILTRO[$SITUACAO_CONFIG] ?? [];
+    // Retorna array vazio para não aplicar filtro pré-fixado
+    return [];
 }
 
 // Função para obter a condição WHERE das cidades
@@ -73,16 +72,9 @@ function getCidadeWhereCondition($alias = 'l') {
     return "(" . implode(" OR ", $cidadeConditions) . ")";
 }
 
-// Função para obter a condição WHERE das situações
+// Função para obter a condição WHERE das situações (desabilitada - filtro livre no frontend)
 function getSituacaoWhereCondition($alias = 't') {
-    $situacoes = getSituacoesAtivas();
-    if (empty($situacoes)) {
-        return null;
-    }
-    $situacaoConditions = [];
-    foreach ($situacoes as $situacao) {
-        $situacaoConditions[] = "$alias.tsk_situation ILIKE '$situacao'";
-    }
-    return "(" . implode(" OR ", $situacaoConditions) . ")";
+    // Retorna null para não aplicar filtro pré-fixado
+    return null;
 }
 ?> 
