@@ -1178,7 +1178,7 @@ $(document).ready(function() {
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label for="qtdInput" style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Quantidade:</label>
-                            <input id="qtdInput" type="number" min="1" step="0.0001" placeholder="Quantidade" value="1" style="width:100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; height: 38px;" />
+                            <input id="qtdInput" type="text" placeholder="Quantidade" value="1" style="width:100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; height: 38px;" />
                         </div>
                         <div style="margin-bottom: 15px;">
                             <label for="valorTotalInput" style="display: block; margin-bottom: 5px; font-weight: 500; color: #333;">Valor Total:</label>
@@ -1633,19 +1633,35 @@ $(document).ready(function() {
             
             // Evento para recalcular valor total quando a quantidade mudar
             $('#qtdInput').off('input').on('input', function() {
-                let valor = parseFloat($(this).val()) || 0;
+                let valorDigitado = $(this).val();
                 
-                // Garante que a quantidade seja pelo menos 1
-                if (valor < 1) {
-                    valor = 1;
-                    $(this).val(1);
+                // Permite apenas números, vírgula e ponto
+                valorDigitado = valorDigitado.replace(/[^\d.,]/g, '');
+                
+                // Converte vírgula para ponto para cálculos
+                valorDigitado = valorDigitado.replace(',', '.');
+                
+                // Permite apenas um ponto decimal
+                const partes = valorDigitado.split('.');
+                if (partes.length > 2) {
+                    valorDigitado = partes[0] + '.' + partes.slice(1).join('');
                 }
                 
                 // Limita a 4 casas decimais
-                if (this.value.includes('.') && this.value.split('.')[1].length > 4) {
-                    this.value = parseFloat(this.value).toFixed(4);
-                    valor = parseFloat(this.value);
+                if (partes.length === 2 && partes[1].length > 4) {
+                    valorDigitado = partes[0] + '.' + partes[1].substring(0, 4);
                 }
+                
+                // Atualiza o valor no input apenas se mudou
+                if ($(this).val() !== valorDigitado) {
+                    $(this).val(valorDigitado);
+                }
+                
+                let valor = parseFloat(valorDigitado) || 0;
+                
+                // Validação de casas decimais já feita no input acima
+                
+                // Não força valor mínimo durante digitação - apenas na confirmação
                 
                 const selectedOption = $materialSelect.find('option:selected');
                 const valorUnitario = parseFloat(selectedOption.data('valor')) || 0;
@@ -1705,18 +1721,18 @@ $(document).ready(function() {
                 return;
             }
             if (!qtd || qtd <= 0) {
-                showToast('Informe uma quantidade válida (mínimo 1)!', 'error');
+                showToast('Informe uma quantidade válida (mínimo 0.0001)!', 'error');
                 $('#qtdInput').focus();
                 return;
             }
-            if (parseFloat(qtd) < 1) {
-                showToast('A quantidade deve ser no mínimo 1!', 'error');
+            if (parseFloat(qtd) < 0.0001) {
+                showToast('A quantidade deve ser no mínimo 0.0001!', 'error');
                 $('#qtdInput').focus();
                 return;
             }
             
             // Valida se a quantidade tem no máximo 4 casas decimais
-            const qtdStr = qtd.toString();
+            const qtdStr = qtd.toString().replace(',', '.');
             if (qtdStr.includes('.') && qtdStr.split('.')[1].length > 4) {
                 showToast('A quantidade deve ter no máximo 4 casas decimais!', 'error');
                 $('#qtdInput').focus();
