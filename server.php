@@ -137,9 +137,10 @@ if (!empty($_POST['columns'])) {
                     $where[] = "l.loc_description ILIKE :$colName";
                     $params[$colName] = "%$searchVal%";
                 } else {
-                    // Para número, busca padrão ", NUMERO" ou " NUMERO" no campo localizacao
-                    $where[] = "l.loc_description ~ :$colName";
-                    $params[$colName] = ",\\s*$searchVal|\\s+$searchVal";
+                    // Para número, busca padrão ", NUMERO" ou " NUMERO" no campo localizacao usando ILIKE
+                    $where[] = "(l.loc_description ILIKE :{$colName}_1 OR l.loc_description ILIKE :{$colName}_2)";
+                    $params[$colName . '_1'] = "%, $searchVal%";
+                    $params[$colName . '_2'] = "% $searchVal%";
                 }
             } else if (in_array($dbCol, $castCols)) {
                 $where[] = "CAST($dbCol AS TEXT) ILIKE :$colName";
