@@ -13,6 +13,9 @@ $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
 $colMap = [
     'quem' => 'a.age_name',
     'ss' => 'l.loc_integrationid',
+    'ss_numero' => 'l.loc_integrationid',
+    'rua' => 'l.loc_description',
+    'numero' => 'l.loc_description',
     'localizacao' => 'l.loc_description',
     'cidade' => 'l.e_localidade',
     'bairro' => 'l.e_bairro',
@@ -126,6 +129,18 @@ if (!empty($_POST['columns'])) {
                     $cidadeWhereCTE = "u45468.dbout_tmp_local2.e_localidade = '$cidadeFiltrada'";
                 }
                 // Se não estiver nas cidades configuradas, mantém o filtro original
+            } else if ($colName == 'rua' || $colName == 'numero') {
+                // Filtro de rua ou número - busca no campo localizacao
+                // Para rua, busca no texto após "END:"
+                // Para número, busca números após vírgula no campo localizacao
+                if ($colName == 'rua') {
+                    $where[] = "l.loc_description ILIKE :$colName";
+                    $params[$colName] = "%$searchVal%";
+                } else {
+                    // Para número, busca padrão ", NUMERO" ou " NUMERO" no campo localizacao
+                    $where[] = "l.loc_description ~ :$colName";
+                    $params[$colName] = ",\\s*$searchVal|\\s+$searchVal";
+                }
             } else if (in_array($dbCol, $castCols)) {
                 $where[] = "CAST($dbCol AS TEXT) ILIKE :$colName";
                 $params[$colName] = "%$searchVal%";
@@ -558,16 +573,21 @@ SQL;
         $rua = '';
         $numero = '';
         
-        if (preg_match('/END:\s*([^,]+),?\s*(\d+)?/', $localizacao, $matches)) {
+        // Tenta extrair do padrão: END: RUA NOME, NUMERO
+        if (preg_match('/END:\s*([^,]+?),\s*(\d+)/', $localizacao, $matches)) {
             $rua = trim($matches[1] ?? '');
             $numero = trim($matches[2] ?? '');
         }
-        
-        // Se não encontrou no padrão acima, tenta outro padrão
-        if (empty($rua) && preg_match('/END:\s*(.+?)(?:\s*-\s*|$)/', $localizacao, $matches)) {
+        // Se não encontrou, tenta padrão sem vírgula antes do número
+        elseif (preg_match('/END:\s*([A-ZÁÉÍÓÚÇÃÕ\s]+?)\s+(\d+)/', $localizacao, $matches)) {
+            $rua = trim($matches[1] ?? '');
+            $numero = trim($matches[2] ?? '');
+        }
+        // Se ainda não encontrou, pega tudo após END: até a primeira vírgula ou hífen
+        elseif (preg_match('/END:\s*([^,|-]+)/', $localizacao, $matches)) {
             $enderecoCompleto = trim($matches[1] ?? '');
-            // Tenta separar rua e número
-            if (preg_match('/^(.+?),\s*(\d+)/', $enderecoCompleto, $matches2)) {
+            // Tenta separar rua e número do endereço completo
+            if (preg_match('/^(.+?)\s+(\d+)$/', $enderecoCompleto, $matches2)) {
                 $rua = trim($matches2[1] ?? '');
                 $numero = trim($matches2[2] ?? '');
             } else {
