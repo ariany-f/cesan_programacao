@@ -14,13 +14,21 @@
 </head>
 <body>
     <div class="container">
+        <div class="tabs-container">
+            <button class="tab-btn" data-tab="recepcao">RECEPÇÃO</button>
+            <button class="tab-btn" data-tab="com-equipes">COM EQUIPES</button>
+            <button class="tab-btn" data-tab="notas-para-baixar">NOTAS PARA BAIXAR</button>
+            <button class="tab-btn" data-tab="notas-baixadas">NOTAS BAIXADAS</button>
+        </div>
         <button id="btnTransferir" class="action-btn transfer-btn" disabled>Transferir Tarefa(s)</button>
         <table id="tasksTable" class="display compact" style="width:100%">
             <thead>
                 <tr class="header-row">
                     <th></th>
                     <th>Quem</th>
-                    <th>Onde</th>
+                    <th>SS</th>
+                    <th>Rua</th>
+                    <th>Número</th>
                     <th>Cidade</th>
                     <th>Bairro</th>
                     <th>Setor</th>
@@ -52,10 +60,14 @@
                     <th></th>
                     <th></th>
                     <th></th>
+                    <th></th>
+                    <th></th>
                 </tr>
             </tbody>
             <tfoot>
                 <tr>
+                    <th></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>

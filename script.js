@@ -89,6 +89,10 @@ $(document).ready(function() {
             "ajax": {
                 "url": "server.php",
                 "type": "POST",
+                "data": function(d) {
+                    // Adiciona o filtro de aba ativa
+                    d.activeTab = window.activeTab || '';
+                },
                 "dataSrc": function(json) {
                     if (json.data) {
                         json.data = json.data.map(row => {
@@ -127,7 +131,9 @@ $(document).ready(function() {
                     "width": "30px"
                 },
                 { "data": "quem" },
-                { "data": "localizacao" },
+                { "data": "ss_numero" },
+                { "data": "rua" },
+                { "data": "numero" },
                 { "data": "cidade" },
                 { "data": "bairro" },
                 { "data": "setor" },
@@ -208,7 +214,7 @@ $(document).ready(function() {
                 const $tbody = $('#tasksTable tbody');
                 if (!$tbody.find('tr.filter-row').length) {
                     const $filterRow = $('<tr class="filter-row"></tr>');
-                    for (let i = 0; i < 15; i++) {
+                    for (let i = 0; i < 17; i++) {
                         $filterRow.append('<th></th>');
                     }
                     $tbody.prepend($filterRow);
@@ -458,6 +464,45 @@ $(document).ready(function() {
 
     // Inicialização
     initializeTable();
+
+    // ===== CONTROLE DE ABAS =====
+    // Variável global para armazenar a aba ativa
+    window.activeTab = '';
+
+    // Função para ativar uma aba
+    function activateTab(tabName) {
+        // Remove a classe active de todas as abas
+        $('.tab-btn').removeClass('active');
+        
+        // Se a aba clicada já estava ativa, desativa
+        if (window.activeTab === tabName) {
+            window.activeTab = '';
+            $('.tab-btn[data-tab="' + tabName + '"]').removeClass('active');
+        } else {
+            // Garante que "notas-para-baixar" e "notas-baixadas" não podem estar ativas juntas
+            if (tabName === 'notas-para-baixar' && window.activeTab === 'notas-baixadas') {
+                $('.tab-btn[data-tab="notas-baixadas"]').removeClass('active');
+            } else if (tabName === 'notas-baixadas' && window.activeTab === 'notas-para-baixar') {
+                $('.tab-btn[data-tab="notas-para-baixar"]').removeClass('active');
+            }
+            
+            // Ativa a nova aba
+            window.activeTab = tabName;
+            $('.tab-btn[data-tab="' + tabName + '"]').addClass('active');
+        }
+        
+        // Recarrega a tabela com o novo filtro
+        const table = $('#tasksTable').DataTable();
+        if (table) {
+            table.ajax.reload();
+        }
+    }
+
+    // Eventos de clique nas abas
+    $(document).on('click', '.tab-btn', function() {
+        const tabName = $(this).data('tab');
+        activateTab(tabName);
+    });
 
     // Modal de status (garante que está no body)
     function ensureStatusModal() {

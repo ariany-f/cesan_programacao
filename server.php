@@ -58,6 +58,29 @@ if($orderBy == ''){
 $where = [];
 $params = [];
 
+// Filtro de aba (tab)
+$activeTab = isset($_POST['activeTab']) ? $_POST['activeTab'] : '';
+if ($activeTab) {
+    switch ($activeTab) {
+        case 'recepcao':
+            // RECEPÇÃO: Tarefas com data de registro (recepcionadas)
+            $where[] = "l.e_dataregistro IS NOT NULL";
+            break;
+        case 'com-equipes':
+            // COM EQUIPES: Tarefas com equipes atribuídas (age_name não nulo)
+            $where[] = "a.age_name IS NOT NULL AND a.age_name != ''";
+            break;
+        case 'notas-para-baixar':
+            // NOTAS PARA BAIXAR: status_integracao vazio, NULL ou diferente de "Baixada no Siscom"
+            $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '' OR l.e_situacao != 'Baixada no Siscom')";
+            break;
+        case 'notas-baixadas':
+            // NOTAS BAIXADAS: status_integracao = "Baixada no Siscom"
+            $where[] = "l.e_situacao = 'Baixada no Siscom'";
+            break;
+    }
+}
+
 // Inicializa o filtro de cidade da CTE
 $cidadesAtivas = getCidadesAtivas();
 // Inicializa o filtro de cidade da CTE
@@ -522,6 +545,40 @@ SQL;
     $stmt->bindValue(':start', $start, PDO::PARAM_INT);
     $stmt->execute();
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Processa os dados para separar SS, Rua e Número do campo localizacao
+    foreach ($result as &$row) {
+        $localizacao = $row['localizacao'] ?? '';
+        
+        // Extrai SS (já temos em 'ss', mas vamos garantir)
+        $row['ss_numero'] = $row['ss'] ?? '';
+        
+        // Extrai rua e número do campo localizacao
+        // Formato: "SS: 10/25-070189-01 | END: RUA SEBASTIAO NASCIMENTO, 395, - CHACARA DO CONDE - VILA VELHA | SERVIÇOS NO CAVALETE"
+        $rua = '';
+        $numero = '';
+        
+        if (preg_match('/END:\s*([^,]+),?\s*(\d+)?/', $localizacao, $matches)) {
+            $rua = trim($matches[1] ?? '');
+            $numero = trim($matches[2] ?? '');
+        }
+        
+        // Se não encontrou no padrão acima, tenta outro padrão
+        if (empty($rua) && preg_match('/END:\s*(.+?)(?:\s*-\s*|$)/', $localizacao, $matches)) {
+            $enderecoCompleto = trim($matches[1] ?? '');
+            // Tenta separar rua e número
+            if (preg_match('/^(.+?),\s*(\d+)/', $enderecoCompleto, $matches2)) {
+                $rua = trim($matches2[1] ?? '');
+                $numero = trim($matches2[2] ?? '');
+            } else {
+                $rua = $enderecoCompleto;
+            }
+        }
+        
+        $row['rua'] = $rua;
+        $row['numero'] = $numero;
+    }
+    unset($row); // Remove a referência
 
     // Retornar no formato do DataTables
     echo json_encode([
