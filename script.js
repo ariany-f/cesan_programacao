@@ -279,7 +279,7 @@ $(document).ready(function() {
                     // Limpa a célula
                     $(this).empty();
                     let input;
-                    if (i === 8) { // Situação (dropdown)
+                    if (i === 10) { // Situação (dropdown)
                         input = $('<select class="form-control situacao-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
                         // Carrega todas as situações disponíveis no banco
@@ -295,20 +295,20 @@ $(document).ready(function() {
                             .catch(error => {
                                 // Erro silencioso ao carregar situações
                             });
-                    } else if (i === 9) { // Status de Integração
+                    } else if (i === 11) { // Status de Integração
                         input = $('<select class="form-control" style="width: 100%"></select>');
                         opcoesStatus.forEach(opt => {
                             input.append(`<option value='${opt}'>${opt || 'Filtrar'}</option>`);
                         });
-                    } else if (i === 11) { // Prioridade
+                    } else if (i === 13) { // Prioridade
                         input = $('<input class="form-control" type="text" placeholder="Filtrar" style="width: 100%">');
-                    } else if (i === 12) { // Serviço Solicitado (dropdown de grupos)
+                    } else if (i === 14) { // Serviço Solicitado (dropdown de grupos)
                         input = $('<select class="form-control grupo-servico-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
                         Object.keys(gruposServicos).forEach(grupo => {
                             input.append(`<option value='${grupo}'>${grupo}</option>`);
                         });
-                    } else if (i === 3) { // Cidade (dropdown) - APENAS CIDADES CONFIGURADAS
+                    } else if (i === 5) { // Cidade (dropdown) - APENAS CIDADES CONFIGURADAS
                         input = $('<select class="form-control cidade-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
                         // Carrega apenas as cidades configuradas
@@ -324,9 +324,9 @@ $(document).ready(function() {
                             .catch(error => {
                                 // Erro silencioso ao carregar cidades
                             });
-                    } else if (i === 6 || i === 7) { // Recepcionado e Última atividade
+                    } else if (i === 8 || i === 9) { // Recepcionado e Última atividade
                         input = $('<input type="text" class="datepicker form-control" placeholder="Filtrar" style="width: 100%">');
-                    } else if (i !== 0 && i !== 14) { // Não coloca input no checkbox nem em ações
+                    } else if (i !== 0 && i !== 16) { // Não coloca input no checkbox nem em ações
                         input = $('<input class="form-control" type="text" placeholder="Filtrar" style="width: 100%">');
                     }
                     if (input) {
@@ -341,7 +341,7 @@ $(document).ready(function() {
                     const input = filterCell.find('input, select');
                     let searchTimeout;
                     let lastValue = input.val();
-                    if (colIdx === 12) { // Serviço Solicitado (grupo)
+                    if (colIdx === 14) { // Serviço Solicitado (grupo)
                         input.on('change', function() {
                             const grupo = this.value;
                             let servicos = [];
@@ -355,7 +355,7 @@ $(document).ready(function() {
                                 column.search(value).draw();
                             }
                         });
-                    } else if (colIdx === 3) { // Cidade (filtro específico)
+                    } else if (colIdx === 5) { // Cidade (filtro específico)
                         input.on('change', function() {
                             const value = this.value.trim();
                             if (value !== lastValue) {
@@ -363,7 +363,7 @@ $(document).ready(function() {
                                 column.search(value).draw();
                             }
                         });
-                    } else if (colIdx === 8) { // Situação (filtro específico)
+                    } else if (colIdx === 10) { // Situação (filtro específico)
                         input.on('change', function() {
                             const value = this.value.trim();
                             if (value !== lastValue) {
