@@ -61,7 +61,7 @@ $params = [];
 // Inicializa o filtro de cidade da CTE
 $cidadesAtivas = getCidadesAtivas();
 // Inicializa o filtro de cidade da CTE
-$cidadeWhereCTE = getCidadeWhereCondition('u44280.dbout_tmp_local2');
+$cidadeWhereCTE = getCidadeWhereCondition('u45468.dbout_tmp_local2');
 
 // Filtro fixo para situação baseado na configuração - REMOVIDO para permitir filtro livre no frontend
 // $situacaoWhere = getSituacaoWhereCondition('t');
@@ -100,7 +100,7 @@ if (!empty($_POST['columns'])) {
                 $cidadeFiltrada = $searchVal;
                 // Verifica se a cidade filtrada está entre as disponíveis no config
                 if (in_array($cidadeFiltrada, $cidadesAtivas)) {
-                    $cidadeWhereCTE = "u44280.dbout_tmp_local2.e_localidade = '$cidadeFiltrada'";
+                    $cidadeWhereCTE = "u45468.dbout_tmp_local2.e_localidade = '$cidadeFiltrada'";
                 }
                 // Se não estiver nas cidades configuradas, mantém o filtro original
             } else if (in_array($dbCol, $castCols)) {
@@ -121,7 +121,7 @@ if (isset($_GET['agentes'])) {
         $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
-        $sql = "SELECT age_name, age_id, age_login FROM u44280.dbout_agent WHERE age_login LIKE 'equipe%' and age_active = '1' ORDER BY age_login";
+        $sql = "SELECT age_name, age_id, age_login FROM u45468.dbout_agent WHERE age_login LIKE 'equipe%' and age_active = '1' ORDER BY age_login";
         $stmt = $pdo->query($sql);
         $agentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($agentes, JSON_UNESCAPED_UNICODE);
@@ -159,7 +159,7 @@ if (isset($_GET['situacoes'])) {
         
         // Busca todas as situações distintas disponíveis no banco
         $sql = "SELECT DISTINCT tsk_situation as situacao 
-                FROM u44280.task 
+                FROM u45468.task 
                 WHERE tsk_situation IS NOT NULL 
                 AND tsk_situation != '' 
                 ORDER BY tsk_situation ASC";
@@ -187,7 +187,7 @@ if (isset($_GET['materiais'])) {
                     cev_description as nome,
                     COALESCE(i_unidade, e_unidade, 'UN') as unidade,
                     i_valorunit as valor_unitario
-                FROM u44280.dbout_customentity_mc_cadastroni 
+                FROM u45468.dbout_customentity_mc_cadastroni 
                 WHERE cev_active = '1' AND i_visivel = '1' 
                 ORDER BY cev_description ASC";
         $stmt = $pdo->query($sql);
@@ -249,7 +249,7 @@ if (isset($_POST['inserir_item'])) {
         $valorTotal = $_POST['valor_total'];
         
         // Busca o nome do material
-        $sqlMaterial = "SELECT cev_description FROM u44280.dbout_customentity_mc_cadastroni WHERE cev_id = :material_id";
+        $sqlMaterial = "SELECT cev_description FROM u45468.dbout_customentity_mc_cadastroni WHERE cev_id = :material_id";
         $stmtMaterial = $pdo->prepare($sqlMaterial);
         $stmtMaterial->bindValue(':material_id', $material);
         $stmtMaterial->execute();
@@ -321,7 +321,7 @@ if (isset($_POST['atualizar_status'])) {
         $novoStatus = $_POST['novo_status'];
         
         // Atualiza o status na tabela dbout_tmp_local2
-        $sql = "UPDATE u44280.dbout_tmp_local2 
+        $sql = "UPDATE u45468.dbout_tmp_local2 
                 SET e_situacao = :novo_status 
                 WHERE loc_id = :loc_id";
         
@@ -332,7 +332,7 @@ if (isset($_POST['atualizar_status'])) {
         
         if ($stmt->rowCount() > 0) {
             // Busca os dados atualizados para retornar
-            $sqlSelect = "SELECT e_situacao FROM u44280.dbout_tmp_local2 WHERE loc_id = :loc_id";
+            $sqlSelect = "SELECT e_situacao FROM u45468.dbout_tmp_local2 WHERE loc_id = :loc_id";
             $stmtSelect = $pdo->prepare($sqlSelect);
             $stmtSelect->bindValue(':loc_id', $locId);
             $stmtSelect->execute();
@@ -365,7 +365,7 @@ if (isset($_POST['atualizar_tags'])) {
         $novaTag = $_POST['nova_tag'];
         
         // Busca as tags atuais
-        $sqlSelect = "SELECT e_tag FROM u44280.dbout_tmp_local2 WHERE loc_id = :loc_id";
+        $sqlSelect = "SELECT e_tag FROM u45468.dbout_tmp_local2 WHERE loc_id = :loc_id";
         $stmtSelect = $pdo->prepare($sqlSelect);
         $stmtSelect->bindValue(':loc_id', $locId);
         $stmtSelect->execute();
@@ -379,7 +379,7 @@ if (isset($_POST['atualizar_tags'])) {
         $tagsConcatenadas = implode(',', $tagsArray);
         
         // Atualiza as tags na tabela dbout_tmp_local2
-        $sql = "UPDATE u44280.dbout_tmp_local2 
+        $sql = "UPDATE u45468.dbout_tmp_local2 
                 SET e_tag = :tags 
                 WHERE loc_id = :loc_id";
         
@@ -416,23 +416,23 @@ try {
     // Query de contagem otimizada - usa CTE
     $totalSql = "WITH locais_filtrados AS (
         SELECT *
-        FROM u44280.dbout_tmp_local2
+        FROM u45468.dbout_tmp_local2
         WHERE $cidadeWhereCTE
     )
-    SELECT COUNT(*) FROM u44280.task AS t
+    SELECT COUNT(*) FROM u45468.task AS t
         INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id";
     $total = $pdo->query($totalSql)->fetchColumn();
 
     // Total de registros filtrados - OTIMIZADO COM CTE
     $filteredSql = "WITH locais_filtrados AS (
         SELECT *
-        FROM u44280.dbout_tmp_local2
+        FROM u45468.dbout_tmp_local2
         WHERE $cidadeWhereCTE
     )
-    SELECT COUNT(DISTINCT t.tsk_id) FROM u44280.task AS t
+    SELECT COUNT(DISTINCT t.tsk_id) FROM u45468.task AS t
         INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
-        LEFT JOIN u44280.dbout_agent AS a ON t.age_id = a.age_id
-        INNER JOIN u44280.tasktype AS tt ON tt.tty_id = t.tty_id";
+        LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+        INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id";
     
     // Adiciona outros filtros se existirem
     if (!empty($where)) {
@@ -462,7 +462,7 @@ try {
     $sql = <<<SQL
 WITH locais_filtrados AS (
     SELECT *
-    FROM u44280.dbout_tmp_local2
+    FROM u45468.dbout_tmp_local2
     WHERE $cidadeWhereCTE
 )
 SELECT
@@ -482,15 +482,15 @@ SELECT
     l.e_tag AS "tags",
     COALESCE(l.e_situacao, NULL) AS "status_integracao",
     CASE 
-        WHEN t.tss_id = 50 THEN CONCAT('https://cesanemerglote2.umov.me/CenterWeb/report/schedule/', t.tsk_id, '/', t.tsk_accesstoken)
+        WHEN t.tss_id = 50 THEN CONCAT('https://consglobalmetropole.umov.me/CenterWeb/report/schedule/', t.tsk_id, '/', t.tsk_accesstoken)
         ELSE NULL
     END AS "link",
     t.tsk_priority as "prioridade",
     COALESCE(COUNT(m.ID), 0) AS "numero_itens"
-FROM u44280.task AS t
+FROM u45468.task AS t
 INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
-LEFT JOIN u44280.dbout_agent AS a ON t.age_id = a.age_id
-INNER JOIN u44280.tasktype AS tt ON tt.tty_id = t.tty_id
+LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id
 LEFT JOIN MaterialSS AS m ON m.NumeroSS = l.loc_integrationid
 SQL;
 
