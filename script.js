@@ -983,14 +983,14 @@ $(document).ready(function() {
         // Limpa filtros globais e de coluna (exceto cidade e situação)
         table.search('');
         table.columns().every(function(colIdx) {
-            if (colIdx !== 3 && colIdx !== 8) { // Não limpa o filtro da coluna cidade (índice 3) e situação (índice 8)
+            if (colIdx !== 5 && colIdx !== 10) { // Não limpa o filtro da coluna cidade (índice 5) e situação (índice 10)
                 this.search('');
             }
         });
         // Limpa inputs, selects e datepickers (exceto cidade e situação)
         $('.filter-row input, .filter-row select').each(function() {
             const colIdx = $(this).closest('th').index();
-            if (colIdx !== 3 && colIdx !== 8) { // Não limpa o select de cidade e situação
+            if (colIdx !== 5 && colIdx !== 10) { // Não limpa o select de cidade e situação
                 if ($(this).is('select')) {
                     $(this).val('');
                 } else {
