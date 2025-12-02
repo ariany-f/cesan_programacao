@@ -74,7 +74,8 @@ if ($activeTab) {
             $where[] = "t.tsk_situation = 'EM CAMPO'";
             break;
         case 'notas-para-baixar':
-            // NOTAS PARA BAIXAR: status_integracao vazio ou NULL
+            // NOTAS PARA BAIXAR: situação = "RETORNADA DE CAMPO" E status_integracao vazio ou NULL
+            $where[] = "t.tsk_situation = 'RETORNADA DE CAMPO'";
             $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '')";
             break;
         case 'notas-baixadas':

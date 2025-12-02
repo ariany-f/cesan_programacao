@@ -491,8 +491,19 @@ $(document).ready(function() {
             $('.tab-btn[data-tab="' + tabName + '"]').addClass('active');
         }
         
-        // Recarrega a tabela com o novo filtro
+        // Se a aba ativa filtra por situação (recepcao, com-equipes ou notas-para-baixar), limpa o filtro de situação do dropdown
         const table = $('#tasksTable').DataTable();
+        if (table && (window.activeTab === 'recepcao' || window.activeTab === 'com-equipes' || window.activeTab === 'notas-para-baixar')) {
+            // Limpa o filtro de situação (coluna 10) para evitar conflito
+            const situacaoSelect = $('.filter-row th').eq(10).find('.situacao-select');
+            if (situacaoSelect.length) {
+                situacaoSelect.val('').trigger('change');
+            }
+            // Limpa também o filtro na coluna do DataTables
+            table.column(10).search('');
+        }
+        
+        // Recarrega a tabela com o novo filtro
         if (table) {
             table.ajax.reload();
         }
