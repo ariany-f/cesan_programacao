@@ -67,7 +67,7 @@ if ($activeTab) {
     switch ($activeTab) {
         case 'recepcao':
             // RECEPÇÃO: Pendente de envio pra campo
-            $where[] = "t.tsk_situation = 'Pendente de Envio Para Campo'";
+            $where[] = "t.tsk_situation = 'Pendente de Envio para Campo'";
             break;
         case 'com-equipes':
             // COM EQUIPES: Notas em campo
