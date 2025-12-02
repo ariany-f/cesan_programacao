@@ -74,12 +74,12 @@ if ($activeTab) {
             $where[] = "a.age_name IS NOT NULL AND a.age_name != ''";
             break;
         case 'notas-para-baixar':
-            // NOTAS PARA BAIXAR: status_integracao vazio, NULL ou diferente de "Baixada no Siscom"
-            $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '' OR l.e_situacao != 'Baixada no Siscom')";
+            // NOTAS PARA BAIXAR: status_integracao vazio ou NULL
+            $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '')";
             break;
         case 'notas-baixadas':
-            // NOTAS BAIXADAS: status_integracao = "Baixada no Siscom"
-            $where[] = "l.e_situacao = 'Baixada no Siscom'";
+            // NOTAS BAIXADAS: status_integracao preenchido (não vazio)
+            $where[] = "(l.e_situacao IS NOT NULL AND l.e_situacao != '')";
             break;
     }
 }
