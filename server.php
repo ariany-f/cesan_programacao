@@ -67,15 +67,15 @@ if ($activeTab) {
     switch ($activeTab) {
         case 'recepcao':
             // RECEPÇÃO: Pendente de envio pra campo
-            $where[] = "t.tsk_situation = 'PENDENTE DE ENVIO PARA CAMPO'";
+            $where[] = "t.tsk_situation = 'Pendente de Envio Para Campo'";
             break;
         case 'com-equipes':
             // COM EQUIPES: Notas em campo
-            $where[] = "t.tsk_situation = 'EM CAMPO'";
+            $where[] = "t.tsk_situation = 'Em Campo'";
             break;
         case 'notas-para-baixar':
             // NOTAS PARA BAIXAR: situação = "RETORNADA DE CAMPO" E status_integracao vazio ou NULL
-            $where[] = "t.tsk_situation = 'RETORNADA DE CAMPO'";
+            $where[] = "t.tsk_situation = 'Retornada de Campo'";
             $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '')";
             break;
         case 'notas-baixadas':
