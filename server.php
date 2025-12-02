@@ -106,6 +106,14 @@ if (!empty($_POST['columns'])) {
     foreach ($_POST['columns'] as $col) {
         $colName = $col['data'];
         $searchVal = trim($col['search']['value'] ?? '');
+        // Ignora o filtro de situação se a aba "notas-para-baixar" estiver ativa (já filtra por situação)
+        if ($colName == 'situacao' && $activeTab == 'notas-para-baixar') {
+            continue;
+        }
+        // Ignora o filtro de situação se as abas "recepcao" ou "com-equipes" estiverem ativas (já filtram por situação)
+        if ($colName == 'situacao' && ($activeTab == 'recepcao' || $activeTab == 'com-equipes')) {
+            continue;
+        }
         // Só filtra se o valor não for vazio e for uma coluna permitida
         if ($searchVal !== '' && in_array($colName, $allowedCols)) {
             $dbCol = $colMap[$colName];
