@@ -66,12 +66,12 @@ $activeTab = isset($_POST['activeTab']) ? $_POST['activeTab'] : '';
 if ($activeTab) {
     switch ($activeTab) {
         case 'recepcao':
-            // RECEPÇÃO: Tarefas com data de registro (recepcionadas)
-            $where[] = "l.e_dataregistro IS NOT NULL";
+            // RECEPÇÃO: Pendente de envio pra campo
+            $where[] = "t.tsk_situation = 'PENDENTE DE ENVIO PARA CAMPO'";
             break;
         case 'com-equipes':
-            // COM EQUIPES: Tarefas com equipes atribuídas (age_name não nulo)
-            $where[] = "a.age_name IS NOT NULL AND a.age_name != ''";
+            // COM EQUIPES: Notas em campo
+            $where[] = "t.tsk_situation = 'EM CAMPO'";
             break;
         case 'notas-para-baixar':
             // NOTAS PARA BAIXAR: status_integracao vazio ou NULL
