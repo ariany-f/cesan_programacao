@@ -1395,14 +1395,14 @@ $(document).ready(function() {
                     $materialSelect.append(`<option value="${material.id}" data-unidade="${unidade}" data-valor="${material.valor_unitario || 0}">${optionText}</option>`);
                 });
                 
-                // Adiciona dica de uso se houver muitos materiais
-                if (materiais.length > 50) {
-                    $materialSelect.after(`
-                        <div style="margin-top: 5px; font-size: 12px; color: #666; text-align: center;">
-                            💡 Dica: Digite para filtrar rapidamente entre ${materiais.length} materiais disponíveis
-                        </div>
-                    `);
-                }
+                // // Adiciona dica de uso se houver muitos materiais
+                // if (materiais.length > 50) {
+                //     $materialSelect.after(`
+                //         <div style="margin-top: 5px; font-size: 12px; color: #666; text-align: center;">
+                //             💡 Dica: Digite para filtrar rapidamente entre ${materiais.length} materiais disponíveis
+                //         </div>
+                //     `);
+                // }
             } else {
                 console.log('Nenhum material encontrado ou resposta inválida');
             }
