@@ -169,7 +169,7 @@ if (isset($_GET['agentes'])) {
         $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
-        $sql = "SELECT age_name, age_id, age_login FROM u45468.dbout_agent WHERE age_login LIKE 'equipe%' and age_active = '1' ORDER BY age_login";
+        $sql = "SELECT age_name, age_id, age_login FROM u45468.dbout_agent WHERE age_active = '1' ORDER BY age_login";
         $stmt = $pdo->query($sql);
         $agentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($agentes, JSON_UNESCAPED_UNICODE);
