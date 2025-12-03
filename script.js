@@ -628,7 +628,7 @@ $(document).ready(function() {
                 'Content-Type': 'application/x-www-form-urlencoded'
             };
             const xml = `<schedule>\n  <customFields>\n<situacao><alternativeIdentifier>${newStatus}</alternativeIdentifier></situacao>\n  </customFields>\n</schedule>`;
-            const url = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${rowData.tarefa}.xml`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
             
             try {
                 // Primeiro endpoint - schedule
@@ -642,7 +642,7 @@ $(document).ready(function() {
                 let serviceLocalResponse = null;
                 if (rowData.loc_id) {
                     const serviceLocalXml = `<serviceLocal>\n  <customFields>\n<situacao><alternativeIdentifier>${newStatus}</alternativeIdentifier></situacao>\n  </customFields>\n</serviceLocal>`;
-                    const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/serviceLocal/${rowData.loc_id}.xml`;
+                    const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/serviceLocal/${rowData.loc_id}.xml`;
                     
                     serviceLocalResponse = await fetch(serviceLocalUrl, {
                         method: 'POST',
@@ -728,7 +728,7 @@ $(document).ready(function() {
                 table.row(rowIdx).data(rowData).draw();
 
                 // 1. GET do XML atual
-                const getUrl = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${rowData.tarefa}.xml`;
+                const getUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
                 try {
                     const getResp = await fetch(getUrl);
                     let xmlText = await getResp.text();
@@ -769,7 +769,7 @@ $(document).ready(function() {
                     newXml += `  </customFields>\n`;
                     newXml += `</schedule>`;
                     // 4. POST para o endpoint
-                    const postUrl = 'https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule.xml';
+                    const postUrl = 'https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule.xml';
                     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
                     const postResp = await fetch(postUrl, {
                         method: 'POST',
@@ -781,7 +781,7 @@ $(document).ready(function() {
                     let serviceLocalResponse = null;
                     if (rowData.loc_id) {
                         const serviceLocalXml = `<serviceLocal>\n  <customFields>\n<tag>${tag}</tag>\n  </customFields>\n</serviceLocal>`;
-                        const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/serviceLocal/${rowData.loc_id}.xml`;
+                        const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/serviceLocal/${rowData.loc_id}.xml`;
                         
                         serviceLocalResponse = await fetch(serviceLocalUrl, {
                             method: 'POST',
@@ -936,7 +936,7 @@ $(document).ready(function() {
         $('#fullpageLoader').fadeIn(120);
         let success = 0, fail = 0;
         for (const tsk_id of selectedTasks) {
-            const url = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${tsk_id}.xml`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${tsk_id}.xml`;
             const xml = `<schedule><agent><id>${agentId}</id></agent></schedule>`;
             try {
                 const resp = await fetch(url, {
@@ -1088,7 +1088,7 @@ $(document).ready(function() {
                 'Content-Type': 'application/x-www-form-urlencoded'
             };
             const xml = `<schedule>\n<priority>${novaPrioridade}</priority>\n </schedule>`;
-            const url = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${rowData.tarefa}.xml`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
             try {
                 const response = await fetch(url, {
                     method: 'POST',
