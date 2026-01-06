@@ -728,54 +728,54 @@ $(document).ready(function() {
                 table.row(rowIdx).data(rowData).draw();
 
                 // 1. GET do XML atual
-                const getUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
+                // const getUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
                 try {
-                    const getResp = await fetch(getUrl);
-                    let xmlText = await getResp.text();
+                    // const getResp = await fetch(getUrl);
+                    // let xmlText = await getResp.text();
                     // 2. Parse o XML e extraia os campos necessários
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
-                    function getVal(path) {
-                        const el = xmlDoc.querySelector(path);
-                        return el ? el.textContent : '';
-                    }
+                    // const parser = new DOMParser();
+                    // const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+                    // function getVal(path) {
+                    //     const el = xmlDoc.querySelector(path);
+                    //     return el ? el.textContent : '';
+                    // }
                     // Campos principais
-                    const agentId = getVal('agent > id');
-                    const serviceLocalId = getVal('serviceLocal > id');
-                    const scheduleTypeAlt = getVal('scheduleType > alternativeIdentifier');
-                    const localidade = getVal('customFields > localidade > alternativeIdentifier');
-                    const bairro = getVal('customFields > bairro > alternativeIdentifier');
-                    const setor = getVal('customFields > setor > alternativeIdentifier');
+                    // const agentId = getVal('agent > id');
+                    // const serviceLocalId = getVal('serviceLocal > id');
+                    // const scheduleTypeAlt = getVal('scheduleType > alternativeIdentifier');
+                    // const localidade = getVal('customFields > localidade > alternativeIdentifier');
+                    // const bairro = getVal('customFields > bairro > alternativeIdentifier');
+                    // const setor = getVal('customFields > setor > alternativeIdentifier');
                     // Data/hora atuais
-                    const dateGet = getVal('date');
-                    const hourGet = getVal('hour');
-                    const now = new Date();
-                    const date = dateGet || now.toISOString().slice(0,10);
-                    const hour = hourGet || now.toTimeString().slice(0,5);
+                    // const dateGet = getVal('date');
+                    // const hourGet = getVal('hour');
+                    // const now = new Date();
+                    // const date = dateGet || now.toISOString().slice(0,10);
+                    // const hour = hourGet || now.toTimeString().slice(0,5);
                     // 3. Montar novo XML enxuto
-                    let newXml = `<schedule>\n`;
-                    if(agentId) newXml += `  <agent><id>${agentId}</id></agent>\n`;
-                    if(serviceLocalId) newXml += `  <serviceLocal><id>${serviceLocalId}</id></serviceLocal>\n`;
-                    if(scheduleTypeAlt) newXml += `  <scheduleType><alternativeIdentifier>${scheduleTypeAlt}</alternativeIdentifier></scheduleType>\n`;
-                    newXml += `  <activitiesOrigin>3</activitiesOrigin>\n`;
-                    newXml += `  <situation><id>30</id></situation>\n`;
-                    newXml += `  <date>${date}</date>\n`;
-                    newXml += `  <hour>${hour}</hour>\n`;
-                    newXml += `  <customFields>\n`;
-                    if(localidade) newXml += `    <localidade><alternativeIdentifier>${localidade}</alternativeIdentifier></localidade>\n`;
-                    if(bairro) newXml += `    <bairro><alternativeIdentifier>${bairro}</alternativeIdentifier></bairro>\n`;
-                    if(setor) newXml += `    <setor><alternativeIdentifier>${setor}</alternativeIdentifier></setor>\n`;
-                    newXml += `    <tag>${tag}</tag>\n`;
-                    newXml += `  </customFields>\n`;
-                    newXml += `</schedule>`;
+                    // let newXml = `<schedule>\n`;
+                    // if(agentId) newXml += `  <agent><id>${agentId}</id></agent>\n`;
+                    // if(serviceLocalId) newXml += `  <serviceLocal><id>${serviceLocalId}</id></serviceLocal>\n`;
+                    // if(scheduleTypeAlt) newXml += `  <scheduleType><alternativeIdentifier>${scheduleTypeAlt}</alternativeIdentifier></scheduleType>\n`;
+                    // newXml += `  <activitiesOrigin>3</activitiesOrigin>\n`;
+                    // newXml += `  <situation><id>30</id></situation>\n`;
+                    // newXml += `  <date>${date}</date>\n`;
+                    // newXml += `  <hour>${hour}</hour>\n`;
+                    // newXml += `  <customFields>\n`;
+                    // if(localidade) newXml += `    <localidade><alternativeIdentifier>${localidade}</alternativeIdentifier></localidade>\n`;
+                    // if(bairro) newXml += `    <bairro><alternativeIdentifier>${bairro}</alternativeIdentifier></bairro>\n`;
+                    // if(setor) newXml += `    <setor><alternativeIdentifier>${setor}</alternativeIdentifier></setor>\n`;
+                    // newXml += `    <tag>${tag}</tag>\n`;
+                    // newXml += `  </customFields>\n`;
+                    // newXml += `</schedule>`;
                     // 4. POST para o endpoint
-                    const postUrl = 'https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule.xml';
+                    // const postUrl = 'https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule.xml';
                     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-                    const postResp = await fetch(postUrl, {
-                        method: 'POST',
-                        headers: headers,
-                        body: 'data=' + encodeURIComponent(newXml)
-                    });
+                    // const postResp = await fetch(postUrl, {
+                    //     method: 'POST',
+                    //     headers: headers,
+                    //     body: 'data=' + encodeURIComponent(newXml)
+                    // });
                     
                     // Segundo endpoint - serviceLocal (se loc_id estiver disponível)
                     let serviceLocalResponse = null;
@@ -789,8 +789,8 @@ $(document).ready(function() {
                             body: 'data=' + encodeURIComponent(serviceLocalXml)
                         });
                     }
-                    
-                    if (postResp.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
+                    // if (postResp.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
+                    if ((!serviceLocalResponse || serviceLocalResponse.ok)) {
                         // Atualiza também na tabela dbout_tmp_local2
                         try {
                             const updateFormData = new FormData();
