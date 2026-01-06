@@ -27,7 +27,10 @@ $colMap = [
     'prioridade' => 't.tsk_priority',
     'servico' => 'tt.tty_description',
     'tags' => 'l.e_tag',
-    'status_integracao' => 'l.e_situacao'
+    'status_integracao' => 'l.e_situacao',
+    'informacao_solicitante' => 'l.e_informacaosolicitante',
+    'esclarecimento_solicitante' => 'l.e_esclarecimentosolicitante',
+    'ref_localizacao' => 'l.e_reflocalizacao'
 ];
 
 // Colunas que precisam de CAST para texto (usando os nomes do colMap)
@@ -81,6 +84,10 @@ if ($activeTab) {
         case 'notas-baixadas':
             // NOTAS BAIXADAS: status_integracao preenchido (não vazio)
             $where[] = "(l.e_situacao IS NOT NULL AND l.e_situacao != '')";
+            break;
+        case 'com-tags':
+            // COM TAGS: somente registros com tag preenchida
+            $where[] = "(l.e_tag IS NOT NULL AND TRIM(l.e_tag) <> '')";
             break;
     }
 }
@@ -528,6 +535,9 @@ SELECT
     t.tsk_id AS "tarefa",
     tt.tty_description AS "servico",
     l.e_tag AS "tags",
+    l.e_reflocalizacao AS "ref_localizacao",
+    l.e_informacaosolicitante AS "informacao_solicitante",
+    l.e_esclarecimentosolicitante AS "esclarecimento_solicitante",
     COALESCE(l.e_situacao, NULL) AS "status_integracao",
     CASE 
         WHEN t.tss_id = 50 THEN CONCAT('https://consglobalmetropole.umov.me/CenterWeb/report/schedule/', t.tsk_id, '/', t.tsk_accesstoken)
@@ -555,7 +565,7 @@ SQL;
     }
 
     // Adiciona GROUP BY para o contador de itens
-    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_situacao, t.tsk_priority, t.tsk_accesstoken";
+    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_reflocalizacao, l.e_informacaosolicitante, l.e_esclarecimentosolicitante, l.e_situacao, t.tsk_priority, t.tsk_accesstoken";
 
     // Aplica a ordenação solicitada pelo usuário
     $sql .= "\n$orderBy";

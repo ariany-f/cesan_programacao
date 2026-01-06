@@ -81,11 +81,25 @@ $(document).ready(function() {
         const table = $('#tasksTable').DataTable({
             "processing": true,
             "serverSide": true,
+            "autoWidth": false,
             "order": [[7, "desc"]],
             "searching": true,
             "pagingType": "full_numbers",
             "pageLength": 10,
             "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+            "rowCallback": function(row, data) {
+                // Coloca title nas células com texto para mostrar o conteúdo completo no hover
+                // Ignora: checkbox (col 0) e ações (última col 16)
+                const $row = $(row);
+                if ($row.hasClass('filter-row')) return;
+                $row.find('td').each(function(colIdx) {
+                    if (colIdx === 0 || colIdx === 16) return;
+                    const $td = $(this);
+                    const txt = ($td.text() || '').replace(/\s+/g, ' ').trim();
+                    if (txt) $td.attr('title', txt);
+                    else $td.removeAttr('title');
+                });
+            },
             "ajax": {
                 "url": "server.php",
                 "type": "POST",
@@ -131,7 +145,21 @@ $(document).ready(function() {
                     "width": "30px"
                 },
                 { "data": "quem" },
-                { "data": "ss_numero" },
+                { 
+                    "data": "ss_numero",
+                    "render": function(data, type, row) {
+                        const ss = data || '';
+                        if (type !== 'display') return ss;
+                        return `
+                            <span style="display:inline-flex;align-items:center;gap:6px;">
+                                <span>${ss}</span>
+                                <button class="action-btn ss-info" type="button" title="Ver Resumo" style="min-width:auto;padding:4px 6px;">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </button>
+                            </span>
+                        `;
+                    }
+                },
                 { "data": "rua" },
                 { "data": "numero" },
                 { "data": "cidade" },
@@ -513,6 +541,75 @@ $(document).ready(function() {
     $(document).on('click', '.tab-btn', function() {
         const tabName = $(this).data('tab');
         activateTab(tabName);
+    });
+
+    // ===== MODAL: INFORMAÇÕES DO SOLICITANTE (SS) =====
+    function ensureSsInfoModal() {
+        if ($('#ssInfoModal').length === 0) {
+            $('body').append(`
+                <div id="ssInfoModal" class="custom-modal-bg" style="display:none;">
+                    <div class="custom-modal-box" style="width: 720px; max-width: 95vw;">
+                        <h3>Resumo</h3>
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:12px;color:#555;font-weight:600;margin-bottom:6px;">Ref. Localização</div>
+                            <div id="ssInfoRef" style="font-size:12px;color:#111;white-space:pre-wrap;"></div>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:12px;color:#555;font-weight:600;margin-bottom:6px;">Informação do Solicitante</div>
+                            <div id="ssInfoInfoSolic" style="font-size:12px;color:#111;white-space:pre-wrap;"></div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <div style="font-size:12px;color:#555;font-weight:600;margin-bottom:6px;">Esclarecimento do Solicitante</div>
+                            <div id="ssInfoEsclSolic" style="font-size:12px;color:#111;white-space:pre-wrap;"></div>
+                        </div>
+                        <div class="custom-modal-actions">
+                            <button id="ssInfoClose" class="confirm">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+    }
+
+    function setSsInfoValue(selector, value) {
+        const v = (value === null || value === undefined || String(value).trim() === '') ? '—' : String(value);
+        $(selector).text(v);
+    }
+
+    // Clique no ícone de informação ao lado da SS
+    $('#tasksTable').on('click', '.action-btn.ss-info', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        ensureSsInfoModal();
+
+        const table = $('#tasksTable').DataTable();
+        const $tr = $(this).closest('tr');
+        let rowData = table.row($tr).data();
+        if (!rowData) {
+            // fallback (caso pegue uma linha "child" ou similar)
+            rowData = table.row($tr.prev()).data();
+        }
+        if (!rowData) return;
+
+        setSsInfoValue('#ssInfoRef', rowData.ref_localizacao);
+        setSsInfoValue('#ssInfoInfoSolic', rowData.informacao_solicitante);
+        setSsInfoValue('#ssInfoEsclSolic', rowData.esclarecimento_solicitante);
+
+        $('#ssInfoModal').css('display', 'flex');
+    });
+
+    // Fechar modal
+    $(document).off('click', '#ssInfoClose');
+    $(document).on('click', '#ssInfoClose', function() {
+        $('#ssInfoModal').fadeOut(180);
+    });
+
+    // Clique fora da caixa fecha
+    $(document).off('click', '#ssInfoModal');
+    $(document).on('click', '#ssInfoModal', function(e) {
+        if (e.target === this) {
+            $('#ssInfoModal').fadeOut(180);
+        }
     });
 
     // Modal de status (garante que está no body)
