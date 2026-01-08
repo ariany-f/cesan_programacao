@@ -211,6 +211,9 @@ $(document).ready(function() {
                             // Não tem itens: cinza com fonte azul (estilo padrão)
                             html += ` <button class='action-btn incluir-itens' data-id='${row.tarefa}' alt='Incluir itens' title='Incluir itens'><i class='fa-solid fa-boxes-stacked'></i></button>`;
                         }
+
+                        // Novo relatório (layout novo) - abre HTML pronto para imprimir/salvar em PDF
+                        html += ` <button class='action-btn visualizar-novo' data-id='${row.tarefa}' alt='Visualizar novo' title='Visualizar Novo'><i class='fa-solid fa-file-lines'></i></button>`;
                         
                         if (row.link) {
                             html += ` <button class='action-btn view' data-id='${row.tarefa}' data-link='${row.link}' alt='Ver relatório' title='Ver relatório'><i class='fa-solid fa-eye'></i></button>`;
@@ -473,6 +476,14 @@ $(document).ready(function() {
             if (rowData) {
                 window.open(link, '_blank');
             }
+        });
+
+        // Evento do botão Visualizar Novo (HTML pronto para imprimir/salvar PDF)
+        $('#tasksTable').on('click', '.action-btn.visualizar-novo', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const taskId = $(this).data('id');
+            window.open(`relatorio_novo.php?tarefa=${encodeURIComponent(taskId)}`, '_blank');
         });
 
         // Exibe/oculta overlay de loading global conforme processamento do DataTables
