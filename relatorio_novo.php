@@ -465,7 +465,8 @@ td {
 <body>
 
 <div class="topbar">
-    <button type="button" onclick="window.print()">Imprimir / Salvar como PDF</button>
+    <button type="button" id="btnDownloadPDF">Baixar PDF</button>
+    <button type="button" onclick="window.print()" style="margin-left:10px;">Imprimir</button>
 </div>
 
 <div id="pages"></div>
@@ -868,8 +869,44 @@ td {
         paginate();
     }
 
+    function downloadPDF() {
+        const btn = document.getElementById('btnDownloadPDF');
+        if (!btn) return;
+        
+        btn.disabled = true;
+        btn.textContent = 'Gerando PDF...';
+        
+        // Pega o ID da tarefa da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const tarefa = urlParams.get('tarefa');
+        
+        if (!tarefa) {
+            alert('Erro: ID da tarefa não encontrado');
+            btn.disabled = false;
+            btn.textContent = 'Baixar PDF';
+            return;
+        }
+        
+        // Abre o endpoint de geração de PDF com parâmetro para download
+        window.location.href = 'gerar_pdf.php?tarefa=' + encodeURIComponent(tarefa) + '&download=1';
+        
+        // Restaura o botão após um tempo
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = 'Baixar PDF';
+        }, 2000);
+    }
+
     window.addEventListener('load', init);
     window.addEventListener('beforeprint', paginate);
+    
+    // Evento do botão de download
+    document.addEventListener('DOMContentLoaded', function() {
+        const btn = document.getElementById('btnDownloadPDF');
+        if (btn) {
+            btn.addEventListener('click', downloadPDF);
+        }
+    });
 })();
 </script>
 
