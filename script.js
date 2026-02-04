@@ -72,6 +72,9 @@ $(document).ready(function() {
         ],
         "MEDIÇÃO": [
             { id: "8000", nome: "MEDICAO DE SERVICO OPERACIONAL" }
+        ],
+        "HIDROMETRIA": [
+            { id: "5000", nome: "HIDROMETRIA" }
         ]
     };
 
