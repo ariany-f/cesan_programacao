@@ -84,14 +84,32 @@ $(document).ready(function() {
         const table = $('#tasksTable').DataTable({
             "processing": true,
             "serverSide": true,
+            "autoWidth": false,
             "order": [[7, "desc"]],
             "searching": true,
             "pagingType": "full_numbers",
             "pageLength": 10,
             "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+            "rowCallback": function(row, data) {
+                // Coloca title nas células com texto para mostrar o conteúdo completo no hover
+                // Ignora: checkbox (col 0) e ações (última col 16)
+                const $row = $(row);
+                if ($row.hasClass('filter-row')) return;
+                $row.find('td').each(function(colIdx) {
+                    if (colIdx === 0 || colIdx === 16) return;
+                    const $td = $(this);
+                    const txt = ($td.text() || '').replace(/\s+/g, ' ').trim();
+                    if (txt) $td.attr('title', txt);
+                    else $td.removeAttr('title');
+                });
+            },
             "ajax": {
                 "url": "server.php",
                 "type": "POST",
+                "data": function(d) {
+                    // Adiciona o filtro de aba ativa
+                    d.activeTab = window.activeTab || '';
+                },
                 "dataSrc": function(json) {
                     if (json.data) {
                         json.data = json.data.map(row => {
@@ -130,7 +148,23 @@ $(document).ready(function() {
                     "width": "30px"
                 },
                 { "data": "quem" },
-                { "data": "localizacao" },
+                { 
+                    "data": "ss_numero",
+                    "render": function(data, type, row) {
+                        const ss = data || '';
+                        if (type !== 'display') return ss;
+                        return `
+                            <span style="display:inline-flex;align-items:center;gap:6px;">
+                                <span>${ss}</span>
+                                <button class="action-btn ss-info" type="button" title="Ver Resumo" style="min-width:auto;padding:4px 6px;">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                </button>
+                            </span>
+                        `;
+                    }
+                },
+                { "data": "rua" },
+                { "data": "numero" },
                 { "data": "cidade" },
                 { "data": "bairro" },
                 { "data": "setor" },
@@ -180,6 +214,9 @@ $(document).ready(function() {
                             // Não tem itens: cinza com fonte azul (estilo padrão)
                             html += ` <button class='action-btn incluir-itens' data-id='${row.tarefa}' alt='Incluir itens' title='Incluir itens'><i class='fa-solid fa-boxes-stacked'></i></button>`;
                         }
+
+                        // Novo relatório (layout novo) - abre HTML pronto para imprimir/salvar em PDF
+                        html += ` <button class='action-btn visualizar-novo' data-id='${row.tarefa}' alt='Visualizar novo' title='Visualizar Novo'><i class='fa-solid fa-file-lines'></i></button>`;
                         
                         if (row.link) {
                             html += ` <button class='action-btn view' data-id='${row.tarefa}' data-link='${row.link}' alt='Ver relatório' title='Ver relatório'><i class='fa-solid fa-eye'></i></button>`;
@@ -211,7 +248,7 @@ $(document).ready(function() {
                 const $tbody = $('#tasksTable tbody');
                 if (!$tbody.find('tr.filter-row').length) {
                     const $filterRow = $('<tr class="filter-row"></tr>');
-                    for (let i = 0; i < 15; i++) {
+                    for (let i = 0; i < 17; i++) {
                         $filterRow.append('<th></th>');
                     }
                     $tbody.prepend($filterRow);
@@ -276,7 +313,7 @@ $(document).ready(function() {
                     // Limpa a célula
                     $(this).empty();
                     let input;
-                    if (i === 8) { // Situação (dropdown)
+                    if (i === 10) { // Situação (dropdown)
                         input = $('<select class="form-control situacao-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
                         // Carrega todas as situações disponíveis no banco
@@ -292,20 +329,20 @@ $(document).ready(function() {
                             .catch(error => {
                                 // Erro silencioso ao carregar situações
                             });
-                    } else if (i === 9) { // Status de Integração
+                    } else if (i === 11) { // Status de Integração
                         input = $('<select class="form-control" style="width: 100%"></select>');
                         opcoesStatus.forEach(opt => {
                             input.append(`<option value='${opt}'>${opt || 'Filtrar'}</option>`);
                         });
-                    } else if (i === 11) { // Prioridade
+                    } else if (i === 13) { // Prioridade
                         input = $('<input class="form-control" type="text" placeholder="Filtrar" style="width: 100%">');
-                    } else if (i === 12) { // Serviço Solicitado (dropdown de grupos)
+                    } else if (i === 14) { // Serviço Solicitado (dropdown de grupos)
                         input = $('<select class="form-control grupo-servico-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
                         Object.keys(gruposServicos).forEach(grupo => {
                             input.append(`<option value='${grupo}'>${grupo}</option>`);
                         });
-                    } else if (i === 3) { // Cidade (dropdown) - APENAS CIDADES CONFIGURADAS
+                    } else if (i === 5) { // Cidade (dropdown) - APENAS CIDADES CONFIGURADAS
                         input = $('<select class="form-control cidade-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
                         // Carrega apenas as cidades configuradas
@@ -321,9 +358,9 @@ $(document).ready(function() {
                             .catch(error => {
                                 // Erro silencioso ao carregar cidades
                             });
-                    } else if (i === 6 || i === 7) { // Recepcionado e Última atividade
+                    } else if (i === 8 || i === 9) { // Recepcionado e Última atividade
                         input = $('<input type="text" class="datepicker form-control" placeholder="Filtrar" style="width: 100%">');
-                    } else if (i !== 0 && i !== 14) { // Não coloca input no checkbox nem em ações
+                    } else if (i !== 0 && i !== 16) { // Não coloca input no checkbox nem em ações
                         input = $('<input class="form-control" type="text" placeholder="Filtrar" style="width: 100%">');
                     }
                     if (input) {
@@ -338,7 +375,7 @@ $(document).ready(function() {
                     const input = filterCell.find('input, select');
                     let searchTimeout;
                     let lastValue = input.val();
-                    if (colIdx === 12) { // Serviço Solicitado (grupo)
+                    if (colIdx === 14) { // Serviço Solicitado (grupo)
                         input.on('change', function() {
                             const grupo = this.value;
                             let servicos = [];
@@ -352,7 +389,7 @@ $(document).ready(function() {
                                 column.search(value).draw();
                             }
                         });
-                    } else if (colIdx === 3) { // Cidade (filtro específico)
+                    } else if (colIdx === 5) { // Cidade (filtro específico)
                         input.on('change', function() {
                             const value = this.value.trim();
                             if (value !== lastValue) {
@@ -360,7 +397,7 @@ $(document).ready(function() {
                                 column.search(value).draw();
                             }
                         });
-                    } else if (colIdx === 8) { // Situação (filtro específico)
+                    } else if (colIdx === 10) { // Situação (filtro específico)
                         input.on('change', function() {
                             const value = this.value.trim();
                             if (value !== lastValue) {
@@ -444,6 +481,14 @@ $(document).ready(function() {
             }
         });
 
+        // Evento do botão Visualizar Novo (HTML pronto para imprimir/salvar PDF)
+        $('#tasksTable').on('click', '.action-btn.visualizar-novo', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const taskId = $(this).data('id');
+            window.open(`relatorio_novo.php?tarefa=${encodeURIComponent(taskId)}`, '_blank');
+        });
+
         // Exibe/oculta overlay de loading global conforme processamento do DataTables
         $('#tasksTable').on('processing.dt', function(e, settings, processing) {
             if (processing) {
@@ -461,6 +506,125 @@ $(document).ready(function() {
 
     // Inicialização
     initializeTable();
+
+    // ===== CONTROLE DE ABAS =====
+    // Variável global para armazenar a aba ativa
+    window.activeTab = '';
+
+    // Função para ativar uma aba
+    function activateTab(tabName) {
+        // Remove a classe active de todas as abas
+        $('.tab-btn').removeClass('active');
+        
+        // Se a aba clicada já estava ativa, desativa
+        if (window.activeTab === tabName) {
+            window.activeTab = '';
+            $('.tab-btn[data-tab="' + tabName + '"]').removeClass('active');
+        } else {
+            // Garante que "notas-para-baixar" e "notas-baixadas" não podem estar ativas juntas
+            if (tabName === 'notas-para-baixar' && window.activeTab === 'notas-baixadas') {
+                $('.tab-btn[data-tab="notas-baixadas"]').removeClass('active');
+            } else if (tabName === 'notas-baixadas' && window.activeTab === 'notas-para-baixar') {
+                $('.tab-btn[data-tab="notas-para-baixar"]').removeClass('active');
+            }
+            
+            // Ativa a nova aba
+            window.activeTab = tabName;
+            $('.tab-btn[data-tab="' + tabName + '"]').addClass('active');
+        }
+        
+        // Se a aba ativa filtra por situação (recepcao, com-equipes ou notas-para-baixar), limpa o filtro de situação do dropdown
+        const table = $('#tasksTable').DataTable();
+        if (table && (window.activeTab === 'recepcao' || window.activeTab === 'com-equipes' || window.activeTab === 'notas-para-baixar')) {
+            // Limpa o filtro de situação (coluna 10) para evitar conflito
+            const situacaoSelect = $('.filter-row th').eq(10).find('.situacao-select');
+            if (situacaoSelect.length) {
+                situacaoSelect.val('').trigger('change');
+            }
+            // Limpa também o filtro na coluna do DataTables
+            table.column(10).search('');
+        }
+        
+        // Recarrega a tabela com o novo filtro
+        if (table) {
+            table.ajax.reload();
+        }
+    }
+
+    // Eventos de clique nas abas
+    $(document).on('click', '.tab-btn', function() {
+        const tabName = $(this).data('tab');
+        activateTab(tabName);
+    });
+
+    // ===== MODAL: INFORMAÇÕES DO SOLICITANTE (SS) =====
+    function ensureSsInfoModal() {
+        if ($('#ssInfoModal').length === 0) {
+            $('body').append(`
+                <div id="ssInfoModal" class="custom-modal-bg" style="display:none;">
+                    <div class="custom-modal-box" style="width: 720px; max-width: 95vw;">
+                        <h3>Resumo</h3>
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:12px;color:#555;font-weight:600;margin-bottom:6px;">Ref. Localização</div>
+                            <div id="ssInfoRef" style="font-size:12px;color:#111;white-space:pre-wrap;"></div>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <div style="font-size:12px;color:#555;font-weight:600;margin-bottom:6px;">Informação do Solicitante</div>
+                            <div id="ssInfoInfoSolic" style="font-size:12px;color:#111;white-space:pre-wrap;"></div>
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <div style="font-size:12px;color:#555;font-weight:600;margin-bottom:6px;">Esclarecimento do Solicitante</div>
+                            <div id="ssInfoEsclSolic" style="font-size:12px;color:#111;white-space:pre-wrap;"></div>
+                        </div>
+                        <div class="custom-modal-actions">
+                            <button id="ssInfoClose" class="confirm">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+    }
+
+    function setSsInfoValue(selector, value) {
+        const v = (value === null || value === undefined || String(value).trim() === '') ? '—' : String(value);
+        $(selector).text(v);
+    }
+
+    // Clique no ícone de informação ao lado da SS
+    $('#tasksTable').on('click', '.action-btn.ss-info', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        ensureSsInfoModal();
+
+        const table = $('#tasksTable').DataTable();
+        const $tr = $(this).closest('tr');
+        let rowData = table.row($tr).data();
+        if (!rowData) {
+            // fallback (caso pegue uma linha "child" ou similar)
+            rowData = table.row($tr.prev()).data();
+        }
+        if (!rowData) return;
+
+        setSsInfoValue('#ssInfoRef', rowData.ref_localizacao);
+        setSsInfoValue('#ssInfoInfoSolic', rowData.informacao_solicitante);
+        setSsInfoValue('#ssInfoEsclSolic', rowData.esclarecimento_solicitante);
+
+        $('#ssInfoModal').css('display', 'flex');
+    });
+
+    // Fechar modal
+    $(document).off('click', '#ssInfoClose');
+    $(document).on('click', '#ssInfoClose', function() {
+        $('#ssInfoModal').fadeOut(180);
+    });
+
+    // Clique fora da caixa fecha
+    $(document).off('click', '#ssInfoModal');
+    $(document).on('click', '#ssInfoModal', function(e) {
+        if (e.target === this) {
+            $('#ssInfoModal').fadeOut(180);
+        }
+    });
 
     // Modal de status (garante que está no body)
     function ensureStatusModal() {
@@ -575,7 +739,7 @@ $(document).ready(function() {
                 'Content-Type': 'application/x-www-form-urlencoded'
             };
             const xml = `<schedule>\n  <customFields>\n<situacao><alternativeIdentifier>${newStatus}</alternativeIdentifier></situacao>\n  </customFields>\n</schedule>`;
-            const url = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${rowData.tarefa}.xml`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
             
             try {
                 // Primeiro endpoint - schedule
@@ -589,7 +753,7 @@ $(document).ready(function() {
                 let serviceLocalResponse = null;
                 if (rowData.loc_id) {
                     const serviceLocalXml = `<serviceLocal>\n  <customFields>\n<situacao><alternativeIdentifier>${newStatus}</alternativeIdentifier></situacao>\n  </customFields>\n</serviceLocal>`;
-                    const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/serviceLocal/${rowData.loc_id}.xml`;
+                    const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/serviceLocal/${rowData.loc_id}.xml`;
                     
                     serviceLocalResponse = await fetch(serviceLocalUrl, {
                         method: 'POST',
@@ -675,60 +839,60 @@ $(document).ready(function() {
                 table.row(rowIdx).data(rowData).draw();
 
                 // 1. GET do XML atual
-                const getUrl = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${rowData.tarefa}.xml`;
+                // const getUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
                 try {
-                    const getResp = await fetch(getUrl);
-                    let xmlText = await getResp.text();
+                    // const getResp = await fetch(getUrl);
+                    // let xmlText = await getResp.text();
                     // 2. Parse o XML e extraia os campos necessários
-                    const parser = new DOMParser();
-                    const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
-                    function getVal(path) {
-                        const el = xmlDoc.querySelector(path);
-                        return el ? el.textContent : '';
-                    }
+                    // const parser = new DOMParser();
+                    // const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+                    // function getVal(path) {
+                    //     const el = xmlDoc.querySelector(path);
+                    //     return el ? el.textContent : '';
+                    // }
                     // Campos principais
-                    const agentId = getVal('agent > id');
-                    const serviceLocalId = getVal('serviceLocal > id');
-                    const scheduleTypeAlt = getVal('scheduleType > alternativeIdentifier');
-                    const localidade = getVal('customFields > localidade > alternativeIdentifier');
-                    const bairro = getVal('customFields > bairro > alternativeIdentifier');
-                    const setor = getVal('customFields > setor > alternativeIdentifier');
+                    // const agentId = getVal('agent > id');
+                    // const serviceLocalId = getVal('serviceLocal > id');
+                    // const scheduleTypeAlt = getVal('scheduleType > alternativeIdentifier');
+                    // const localidade = getVal('customFields > localidade > alternativeIdentifier');
+                    // const bairro = getVal('customFields > bairro > alternativeIdentifier');
+                    // const setor = getVal('customFields > setor > alternativeIdentifier');
                     // Data/hora atuais
-                    const dateGet = getVal('date');
-                    const hourGet = getVal('hour');
-                    const now = new Date();
-                    const date = dateGet || now.toISOString().slice(0,10);
-                    const hour = hourGet || now.toTimeString().slice(0,5);
+                    // const dateGet = getVal('date');
+                    // const hourGet = getVal('hour');
+                    // const now = new Date();
+                    // const date = dateGet || now.toISOString().slice(0,10);
+                    // const hour = hourGet || now.toTimeString().slice(0,5);
                     // 3. Montar novo XML enxuto
-                    let newXml = `<schedule>\n`;
-                    if(agentId) newXml += `  <agent><id>${agentId}</id></agent>\n`;
-                    if(serviceLocalId) newXml += `  <serviceLocal><id>${serviceLocalId}</id></serviceLocal>\n`;
-                    if(scheduleTypeAlt) newXml += `  <scheduleType><alternativeIdentifier>${scheduleTypeAlt}</alternativeIdentifier></scheduleType>\n`;
-                    newXml += `  <activitiesOrigin>3</activitiesOrigin>\n`;
-                    newXml += `  <situation><id>30</id></situation>\n`;
-                    newXml += `  <date>${date}</date>\n`;
-                    newXml += `  <hour>${hour}</hour>\n`;
-                    newXml += `  <customFields>\n`;
-                    if(localidade) newXml += `    <localidade><alternativeIdentifier>${localidade}</alternativeIdentifier></localidade>\n`;
-                    if(bairro) newXml += `    <bairro><alternativeIdentifier>${bairro}</alternativeIdentifier></bairro>\n`;
-                    if(setor) newXml += `    <setor><alternativeIdentifier>${setor}</alternativeIdentifier></setor>\n`;
-                    newXml += `    <tag>${tag}</tag>\n`;
-                    newXml += `  </customFields>\n`;
-                    newXml += `</schedule>`;
+                    // let newXml = `<schedule>\n`;
+                    // if(agentId) newXml += `  <agent><id>${agentId}</id></agent>\n`;
+                    // if(serviceLocalId) newXml += `  <serviceLocal><id>${serviceLocalId}</id></serviceLocal>\n`;
+                    // if(scheduleTypeAlt) newXml += `  <scheduleType><alternativeIdentifier>${scheduleTypeAlt}</alternativeIdentifier></scheduleType>\n`;
+                    // newXml += `  <activitiesOrigin>3</activitiesOrigin>\n`;
+                    // newXml += `  <situation><id>30</id></situation>\n`;
+                    // newXml += `  <date>${date}</date>\n`;
+                    // newXml += `  <hour>${hour}</hour>\n`;
+                    // newXml += `  <customFields>\n`;
+                    // if(localidade) newXml += `    <localidade><alternativeIdentifier>${localidade}</alternativeIdentifier></localidade>\n`;
+                    // if(bairro) newXml += `    <bairro><alternativeIdentifier>${bairro}</alternativeIdentifier></bairro>\n`;
+                    // if(setor) newXml += `    <setor><alternativeIdentifier>${setor}</alternativeIdentifier></setor>\n`;
+                    // newXml += `    <tag>${tag}</tag>\n`;
+                    // newXml += `  </customFields>\n`;
+                    // newXml += `</schedule>`;
                     // 4. POST para o endpoint
-                    const postUrl = 'https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule.xml';
+                    // const postUrl = 'https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule.xml';
                     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-                    const postResp = await fetch(postUrl, {
-                        method: 'POST',
-                        headers: headers,
-                        body: 'data=' + encodeURIComponent(newXml)
-                    });
+                    // const postResp = await fetch(postUrl, {
+                    //     method: 'POST',
+                    //     headers: headers,
+                    //     body: 'data=' + encodeURIComponent(newXml)
+                    // });
                     
                     // Segundo endpoint - serviceLocal (se loc_id estiver disponível)
                     let serviceLocalResponse = null;
                     if (rowData.loc_id) {
                         const serviceLocalXml = `<serviceLocal>\n  <customFields>\n<tag>${tag}</tag>\n  </customFields>\n</serviceLocal>`;
-                        const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/serviceLocal/${rowData.loc_id}.xml`;
+                        const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/serviceLocal/${rowData.loc_id}.xml`;
                         
                         serviceLocalResponse = await fetch(serviceLocalUrl, {
                             method: 'POST',
@@ -736,8 +900,8 @@ $(document).ready(function() {
                             body: 'data=' + encodeURIComponent(serviceLocalXml)
                         });
                     }
-                    
-                    if (postResp.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
+                    // if (postResp.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
+                    if ((!serviceLocalResponse || serviceLocalResponse.ok)) {
                         // Atualiza também na tabela dbout_tmp_local2
                         try {
                             const updateFormData = new FormData();
@@ -883,7 +1047,7 @@ $(document).ready(function() {
         $('#fullpageLoader').fadeIn(120);
         let success = 0, fail = 0;
         for (const tsk_id of selectedTasks) {
-            const url = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${tsk_id}.xml`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${tsk_id}.xml`;
             const xml = `<schedule><agent><id>${agentId}</id></agent></schedule>`;
             try {
                 const resp = await fetch(url, {
@@ -941,14 +1105,14 @@ $(document).ready(function() {
         // Limpa filtros globais e de coluna (exceto cidade e situação)
         table.search('');
         table.columns().every(function(colIdx) {
-            if (colIdx !== 3 && colIdx !== 8) { // Não limpa o filtro da coluna cidade (índice 3) e situação (índice 8)
+            if (colIdx !== 5 && colIdx !== 10) { // Não limpa o filtro da coluna cidade (índice 5) e situação (índice 10)
                 this.search('');
             }
         });
         // Limpa inputs, selects e datepickers (exceto cidade e situação)
         $('.filter-row input, .filter-row select').each(function() {
             const colIdx = $(this).closest('th').index();
-            if (colIdx !== 3 && colIdx !== 8) { // Não limpa o select de cidade e situação
+            if (colIdx !== 5 && colIdx !== 10) { // Não limpa o select de cidade e situação
                 if ($(this).is('select')) {
                     $(this).val('');
                 } else {
@@ -1035,7 +1199,7 @@ $(document).ready(function() {
                 'Content-Type': 'application/x-www-form-urlencoded'
             };
             const xml = `<schedule>\n<priority>${novaPrioridade}</priority>\n </schedule>`;
-            const url = `https://api.umov.me/CenterWeb/api/44280e57a1f1ae8ecd723a1cc4f624f34f7c6b/schedule/${rowData.tarefa}.xml`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
             try {
                 const response = await fetch(url, {
                     method: 'POST',
@@ -1342,14 +1506,14 @@ $(document).ready(function() {
                     $materialSelect.append(`<option value="${material.id}" data-unidade="${unidade}" data-valor="${material.valor_unitario || 0}">${optionText}</option>`);
                 });
                 
-                // Adiciona dica de uso se houver muitos materiais
-                if (materiais.length > 50) {
-                    $materialSelect.after(`
-                        <div style="margin-top: 5px; font-size: 12px; color: #666; text-align: center;">
-                            💡 Dica: Digite para filtrar rapidamente entre ${materiais.length} materiais disponíveis
-                        </div>
-                    `);
-                }
+                // // Adiciona dica de uso se houver muitos materiais
+                // if (materiais.length > 50) {
+                //     $materialSelect.after(`
+                //         <div style="margin-top: 5px; font-size: 12px; color: #666; text-align: center;">
+                //             💡 Dica: Digite para filtrar rapidamente entre ${materiais.length} materiais disponíveis
+                //         </div>
+                //     `);
+                // }
             } else {
                 console.log('Nenhum material encontrado ou resposta inválida');
             }

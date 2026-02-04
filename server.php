@@ -13,6 +13,9 @@ $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
 $colMap = [
     'quem' => 'a.age_name',
     'ss' => 'l.loc_integrationid',
+    'ss_numero' => 'l.loc_integrationid',
+    'rua' => 'l.loc_description',
+    'numero' => 'l.loc_description',
     'localizacao' => 'l.loc_description',
     'cidade' => 'l.e_localidade',
     'bairro' => 'l.e_bairro',
@@ -24,7 +27,10 @@ $colMap = [
     'prioridade' => 't.tsk_priority',
     'servico' => 'tt.tty_description',
     'tags' => 'l.e_tag',
-    'status_integracao' => 'l.e_situacao'
+    'status_integracao' => 'l.e_situacao',
+    'informacao_solicitante' => 'l.e_informacaosolicitante',
+    'esclarecimento_solicitante' => 'l.e_esclarecimentosolicitante',
+    'ref_localizacao' => 'l.e_reflocalizacao'
 ];
 
 // Colunas que precisam de CAST para texto (usando os nomes do colMap)
@@ -58,10 +64,38 @@ if($orderBy == ''){
 $where = [];
 $params = [];
 
+// Filtro de aba (tab)
+$activeTab = isset($_POST['activeTab']) ? $_POST['activeTab'] : '';
+if ($activeTab) {
+    switch ($activeTab) {
+        case 'recepcao':
+            // RECEPÇÃO: Pendente de envio pra campo
+            $where[] = "t.tsk_situation = 'Pendente de Envio para Campo'";
+            break;
+        case 'com-equipes':
+            // COM EQUIPES: Notas em campo
+            $where[] = "t.tsk_situation = 'Em Campo'";
+            break;
+        case 'notas-para-baixar':
+            // NOTAS PARA BAIXAR: situação = "RETORNADA DE CAMPO" E status_integracao vazio ou NULL
+            $where[] = "t.tsk_situation = 'Retornada de Campo'";
+            $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '')";
+            break;
+        case 'notas-baixadas':
+            // NOTAS BAIXADAS: status_integracao preenchido (não vazio)
+            $where[] = "(l.e_situacao IS NOT NULL AND l.e_situacao != '')";
+            break;
+        case 'com-tags':
+            // COM TAGS: somente registros com tag preenchida
+            $where[] = "(l.e_tag IS NOT NULL AND TRIM(l.e_tag) <> '')";
+            break;
+    }
+}
+
 // Inicializa o filtro de cidade da CTE
 $cidadesAtivas = getCidadesAtivas();
 // Inicializa o filtro de cidade da CTE
-$cidadeWhereCTE = getCidadeWhereCondition('u44280.dbout_tmp_local2');
+$cidadeWhereCTE = getCidadeWhereCondition('u45468.dbout_tmp_local2');
 
 // Filtro fixo para situação baseado na configuração - REMOVIDO para permitir filtro livre no frontend
 // $situacaoWhere = getSituacaoWhereCondition('t');
@@ -79,6 +113,14 @@ if (!empty($_POST['columns'])) {
     foreach ($_POST['columns'] as $col) {
         $colName = $col['data'];
         $searchVal = trim($col['search']['value'] ?? '');
+        // Ignora o filtro de situação se a aba "notas-para-baixar" estiver ativa (já filtra por situação)
+        if ($colName == 'situacao' && $activeTab == 'notas-para-baixar') {
+            continue;
+        }
+        // Ignora o filtro de situação se as abas "recepcao" ou "com-equipes" estiverem ativas (já filtram por situação)
+        if ($colName == 'situacao' && ($activeTab == 'recepcao' || $activeTab == 'com-equipes')) {
+            continue;
+        }
         // Só filtra se o valor não for vazio e for uma coluna permitida
         if ($searchVal !== '' && in_array($colName, $allowedCols)) {
             $dbCol = $colMap[$colName];
@@ -100,9 +142,22 @@ if (!empty($_POST['columns'])) {
                 $cidadeFiltrada = $searchVal;
                 // Verifica se a cidade filtrada está entre as disponíveis no config
                 if (in_array($cidadeFiltrada, $cidadesAtivas)) {
-                    $cidadeWhereCTE = "u44280.dbout_tmp_local2.e_localidade = '$cidadeFiltrada'";
+                    $cidadeWhereCTE = "u45468.dbout_tmp_local2.e_localidade = '$cidadeFiltrada'";
                 }
                 // Se não estiver nas cidades configuradas, mantém o filtro original
+            } else if ($colName == 'rua' || $colName == 'numero') {
+                // Filtro de rua ou número - busca no campo localizacao
+                // Para rua, busca no texto após "END:"
+                // Para número, busca números após vírgula no campo localizacao
+                if ($colName == 'rua') {
+                    $where[] = "l.loc_description ILIKE :$colName";
+                    $params[$colName] = "%$searchVal%";
+                } else {
+                    // Para número, busca padrão ", NUMERO" ou " NUMERO" no campo localizacao usando ILIKE
+                    $where[] = "(l.loc_description ILIKE :{$colName}_1 OR l.loc_description ILIKE :{$colName}_2)";
+                    $params[$colName . '_1'] = "%, $searchVal%";
+                    $params[$colName . '_2'] = "% $searchVal%";
+                }
             } else if (in_array($dbCol, $castCols)) {
                 $where[] = "CAST($dbCol AS TEXT) ILIKE :$colName";
                 $params[$colName] = "%$searchVal%";
@@ -121,7 +176,7 @@ if (isset($_GET['agentes'])) {
         $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
-        $sql = "SELECT age_name, age_id, age_login FROM u44280.dbout_agent WHERE age_login LIKE 'equipe%' and age_active = '1' ORDER BY age_login";
+        $sql = "SELECT age_name, age_id, age_login FROM u45468.dbout_agent WHERE age_active = '1' ORDER BY age_login";
         $stmt = $pdo->query($sql);
         $agentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($agentes, JSON_UNESCAPED_UNICODE);
@@ -159,7 +214,7 @@ if (isset($_GET['situacoes'])) {
         
         // Busca todas as situações distintas disponíveis no banco
         $sql = "SELECT DISTINCT tsk_situation as situacao 
-                FROM u44280.task 
+                FROM u45468.task 
                 WHERE tsk_situation IS NOT NULL 
                 AND tsk_situation != '' 
                 ORDER BY tsk_situation ASC";
@@ -187,7 +242,7 @@ if (isset($_GET['materiais'])) {
                     cev_description as nome,
                     COALESCE(i_unidade, e_unidade, 'UN') as unidade,
                     i_valorunit as valor_unitario
-                FROM u44280.dbout_customentity_mc_cadastroni 
+                FROM u45468.dbout_customentity_mc_cadastroni 
                 WHERE cev_active = '1' AND i_visivel = '1' 
                 ORDER BY cev_description ASC";
         $stmt = $pdo->query($sql);
@@ -249,7 +304,7 @@ if (isset($_POST['inserir_item'])) {
         $valorTotal = $_POST['valor_total'];
         
         // Busca o nome do material
-        $sqlMaterial = "SELECT cev_description FROM u44280.dbout_customentity_mc_cadastroni WHERE cev_id = :material_id";
+        $sqlMaterial = "SELECT cev_description FROM u45468.dbout_customentity_mc_cadastroni WHERE cev_id = :material_id";
         $stmtMaterial = $pdo->prepare($sqlMaterial);
         $stmtMaterial->bindValue(':material_id', $material);
         $stmtMaterial->execute();
@@ -321,7 +376,7 @@ if (isset($_POST['atualizar_status'])) {
         $novoStatus = $_POST['novo_status'];
         
         // Atualiza o status na tabela dbout_tmp_local2
-        $sql = "UPDATE u44280.dbout_tmp_local2 
+        $sql = "UPDATE u45468.dbout_tmp_local2 
                 SET e_situacao = :novo_status 
                 WHERE loc_id = :loc_id";
         
@@ -332,7 +387,7 @@ if (isset($_POST['atualizar_status'])) {
         
         if ($stmt->rowCount() > 0) {
             // Busca os dados atualizados para retornar
-            $sqlSelect = "SELECT e_situacao FROM u44280.dbout_tmp_local2 WHERE loc_id = :loc_id";
+            $sqlSelect = "SELECT e_situacao FROM u45468.dbout_tmp_local2 WHERE loc_id = :loc_id";
             $stmtSelect = $pdo->prepare($sqlSelect);
             $stmtSelect->bindValue(':loc_id', $locId);
             $stmtSelect->execute();
@@ -365,7 +420,7 @@ if (isset($_POST['atualizar_tags'])) {
         $novaTag = $_POST['nova_tag'];
         
         // Busca as tags atuais
-        $sqlSelect = "SELECT e_tag FROM u44280.dbout_tmp_local2 WHERE loc_id = :loc_id";
+        $sqlSelect = "SELECT e_tag FROM u45468.dbout_tmp_local2 WHERE loc_id = :loc_id";
         $stmtSelect = $pdo->prepare($sqlSelect);
         $stmtSelect->bindValue(':loc_id', $locId);
         $stmtSelect->execute();
@@ -379,7 +434,7 @@ if (isset($_POST['atualizar_tags'])) {
         $tagsConcatenadas = implode(',', $tagsArray);
         
         // Atualiza as tags na tabela dbout_tmp_local2
-        $sql = "UPDATE u44280.dbout_tmp_local2 
+        $sql = "UPDATE u45468.dbout_tmp_local2 
                 SET e_tag = :tags 
                 WHERE loc_id = :loc_id";
         
@@ -416,23 +471,23 @@ try {
     // Query de contagem otimizada - usa CTE
     $totalSql = "WITH locais_filtrados AS (
         SELECT *
-        FROM u44280.dbout_tmp_local2
+        FROM u45468.dbout_tmp_local2
         WHERE $cidadeWhereCTE
     )
-    SELECT COUNT(*) FROM u44280.task AS t
+    SELECT COUNT(*) FROM u45468.task AS t
         INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id";
     $total = $pdo->query($totalSql)->fetchColumn();
 
     // Total de registros filtrados - OTIMIZADO COM CTE
     $filteredSql = "WITH locais_filtrados AS (
         SELECT *
-        FROM u44280.dbout_tmp_local2
+        FROM u45468.dbout_tmp_local2
         WHERE $cidadeWhereCTE
     )
-    SELECT COUNT(DISTINCT t.tsk_id) FROM u44280.task AS t
+    SELECT COUNT(DISTINCT t.tsk_id) FROM u45468.task AS t
         INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
-        LEFT JOIN u44280.dbout_agent AS a ON t.age_id = a.age_id
-        INNER JOIN u44280.tasktype AS tt ON tt.tty_id = t.tty_id";
+        LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+        INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id";
     
     // Adiciona outros filtros se existirem
     if (!empty($where)) {
@@ -462,7 +517,7 @@ try {
     $sql = <<<SQL
 WITH locais_filtrados AS (
     SELECT *
-    FROM u44280.dbout_tmp_local2
+    FROM u45468.dbout_tmp_local2
     WHERE $cidadeWhereCTE
 )
 SELECT
@@ -480,17 +535,20 @@ SELECT
     t.tsk_id AS "tarefa",
     tt.tty_description AS "servico",
     l.e_tag AS "tags",
+    l.e_reflocalizacao AS "ref_localizacao",
+    l.e_informacaosolicitante AS "informacao_solicitante",
+    l.e_esclarecimentosolicitante AS "esclarecimento_solicitante",
     COALESCE(l.e_situacao, NULL) AS "status_integracao",
     CASE 
-        WHEN t.tss_id = 50 THEN CONCAT('https://cesanemerglote2.umov.me/CenterWeb/report/schedule/', t.tsk_id, '/', t.tsk_accesstoken)
+        WHEN t.tss_id = 50 THEN CONCAT('https://consglobalmetropole.umov.me/CenterWeb/report/schedule/', t.tsk_id, '/', t.tsk_accesstoken)
         ELSE NULL
     END AS "link",
     t.tsk_priority as "prioridade",
     COALESCE(COUNT(m.ID), 0) AS "numero_itens"
-FROM u44280.task AS t
+FROM u45468.task AS t
 INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
-LEFT JOIN u44280.dbout_agent AS a ON t.age_id = a.age_id
-INNER JOIN u44280.tasktype AS tt ON tt.tty_id = t.tty_id
+LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id
 LEFT JOIN MaterialSS AS m ON m.NumeroSS = l.loc_integrationid
 SQL;
 
@@ -507,7 +565,7 @@ SQL;
     }
 
     // Adiciona GROUP BY para o contador de itens
-    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_situacao, t.tsk_priority, t.tsk_accesstoken";
+    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_reflocalizacao, l.e_informacaosolicitante, l.e_esclarecimentosolicitante, l.e_situacao, t.tsk_priority, t.tsk_accesstoken";
 
     // Aplica a ordenação solicitada pelo usuário
     $sql .= "\n$orderBy";
@@ -522,6 +580,45 @@ SQL;
     $stmt->bindValue(':start', $start, PDO::PARAM_INT);
     $stmt->execute();
     $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Processa os dados para separar SS, Rua e Número do campo localizacao
+    foreach ($result as &$row) {
+        $localizacao = $row['localizacao'] ?? '';
+        
+        // Extrai SS (já temos em 'ss', mas vamos garantir)
+        $row['ss_numero'] = $row['ss'] ?? '';
+        
+        // Extrai rua e número do campo localizacao
+        // Formato: "SS: 10/25-070189-01 | END: RUA SEBASTIAO NASCIMENTO, 395, - CHACARA DO CONDE - VILA VELHA | SERVIÇOS NO CAVALETE"
+        $rua = '';
+        $numero = '';
+        
+        // Tenta extrair do padrão: END: RUA NOME, NUMERO
+        if (preg_match('/END:\s*([^,]+?),\s*(\d+)/', $localizacao, $matches)) {
+            $rua = trim($matches[1] ?? '');
+            $numero = trim($matches[2] ?? '');
+        }
+        // Se não encontrou, tenta padrão sem vírgula antes do número
+        elseif (preg_match('/END:\s*([A-ZÁÉÍÓÚÇÃÕ\s]+?)\s+(\d+)/', $localizacao, $matches)) {
+            $rua = trim($matches[1] ?? '');
+            $numero = trim($matches[2] ?? '');
+        }
+        // Se ainda não encontrou, pega tudo após END: até a primeira vírgula ou hífen
+        elseif (preg_match('/END:\s*([^,|-]+)/', $localizacao, $matches)) {
+            $enderecoCompleto = trim($matches[1] ?? '');
+            // Tenta separar rua e número do endereço completo
+            if (preg_match('/^(.+?)\s+(\d+)$/', $enderecoCompleto, $matches2)) {
+                $rua = trim($matches2[1] ?? '');
+                $numero = trim($matches2[2] ?? '');
+            } else {
+                $rua = $enderecoCompleto;
+            }
+        }
+        
+        $row['rua'] = $rua;
+        $row['numero'] = $numero;
+    }
+    unset($row); // Remove a referência
 
     // Retornar no formato do DataTables
     echo json_encode([

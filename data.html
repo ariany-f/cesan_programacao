@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista completa de tarefas</title>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="styles.css?ver=1.0.1">
-    <link rel="stylesheet" href="datatable-styles.css?ver=1.0.1">
+    <link rel="stylesheet" href="styles.css?ver=1.0.4">
+    <link rel="stylesheet" href="datatable-styles.css?ver=1.0.4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.14.1/themes/base/jquery-ui.css">
@@ -14,13 +14,22 @@
 </head>
 <body>
     <div class="container">
+        <div class="tabs-container">
+            <button class="tab-btn" data-tab="recepcao">RECEPÇÃO</button>
+            <button class="tab-btn" data-tab="com-equipes">COM EQUIPES</button>
+            <button class="tab-btn" data-tab="notas-para-baixar">NOTAS PARA BAIXAR</button>
+            <button class="tab-btn" data-tab="notas-baixadas">NOTAS BAIXADAS</button>
+            <button class="tab-btn" data-tab="com-tags">COM TAGS</button>
+        </div>
         <button id="btnTransferir" class="action-btn transfer-btn" disabled>Transferir Tarefa(s)</button>
         <table id="tasksTable" class="display compact" style="width:100%">
             <thead>
                 <tr class="header-row">
                     <th></th>
                     <th>Quem</th>
-                    <th>Onde</th>
+                    <th>SS</th>
+                    <th>Rua</th>
+                    <th>Número</th>
                     <th>Cidade</th>
                     <th>Bairro</th>
                     <th>Setor</th>
@@ -52,10 +61,14 @@
                     <th></th>
                     <th></th>
                     <th></th>
+                    <th></th>
+                    <th></th>
                 </tr>
             </tbody>
             <tfoot>
                 <tr>
+                    <th></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                     <th></th>
