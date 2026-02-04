@@ -75,6 +75,10 @@ $(document).ready(function() {
         ],
         "HIDROMETRIA": [
             { id: "5000", nome: "HIDROMETRIA" }
+        ],
+        "COMERCIAL": [
+            { id: "2320", nome: "COMERCIAL" },
+            { id: "2400", nome: "COMERCIAL" }
         ]
     };
 
