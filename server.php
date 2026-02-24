@@ -137,6 +137,18 @@ if (!empty($_POST['columns'])) {
                     $params[$colName . "_$idx"] = $srv;
                 }
                 $where[] = "$dbCol IN (" . implode(",", $inParams) . ")";
+            } else if ($colName == 'servico' && strpos($searchVal, '!OUTROS:') === 0) {
+                // Filtro "OUTROS" - serviços não mapeados (NOT IN)
+                $servicosExcluidos = array_map('trim', explode(',', substr($searchVal, 8))); // Remove "!OUTROS:"
+                $notInParams = [];
+                foreach ($servicosExcluidos as $idx => $srv) {
+                    $paramKey = ":{$colName}_excl_$idx";
+                    $notInParams[] = $paramKey;
+                    $params[$colName . "_excl_$idx"] = $srv;
+                }
+                if (count($notInParams) > 0) {
+                    $where[] = "$dbCol NOT IN (" . implode(",", $notInParams) . ")";
+                }
             } else if ($colName == 'cidade') {
                 // Filtro de cidade - modifica a CTE ao invés do WHERE
                 $cidadeFiltrada = $searchVal;

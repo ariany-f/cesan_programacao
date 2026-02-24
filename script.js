@@ -346,6 +346,7 @@ $(document).ready(function() {
                         Object.keys(gruposServicos).forEach(grupo => {
                             input.append(`<option value='${grupo}'>${grupo}</option>`);
                         });
+                        input.append(`<option value='OUTROS'>OUTROS</option>`);
                     } else if (i === 5) { // Cidade (dropdown) - APENAS CIDADES CONFIGURADAS
                         input = $('<select class="form-control cidade-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
@@ -382,6 +383,26 @@ $(document).ready(function() {
                     if (colIdx === 14) { // Serviço Solicitado (grupo)
                         input.on('change', function() {
                             const grupo = this.value;
+                            
+                            // Se for "OUTROS", envia todas as descrições mapeadas para exclusão
+                            if (grupo === 'OUTROS') {
+                                // Coleta todas as descrições (formato "ID - NOME") de todos os grupos mapeados
+                                const todasDescricoesMapeadas = new Set();
+                                Object.keys(gruposServicos).forEach(g => {
+                                    gruposServicos[g].forEach(s => {
+                                        todasDescricoesMapeadas.add(s.id + ' - ' + s.nome);
+                                    });
+                                });
+                                // Envia como "!OUTROS:" seguido das descrições separadas por vírgula
+                                const descricoesArray = Array.from(todasDescricoesMapeadas);
+                                const value = '!OUTROS:' + descricoesArray.join(',');
+                                if (value !== lastValue) {
+                                    lastValue = value;
+                                    column.search(value).draw();
+                                }
+                                return;
+                            }
+                            
                             let servicos = [];
                             if (grupo && gruposServicos[grupo]) {
                                 servicos = gruposServicos[grupo].map(s => s.id + ' - ' + s.nome);
