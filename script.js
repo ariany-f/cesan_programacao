@@ -665,6 +665,7 @@ $(document).ready(function() {
                             <option value="Duplicada">Duplicada</option>
                         </select>
                         <div class="custom-modal-actions">
+                            <button id="statusRemove" class="cancel" style="background:#e53935;border-color:#d32f2f;color:white;">Remover status</button>
                             <button id="statusCancel" class="cancel">Cancelar</button>
                             <button id="statusConfirm" class="confirm">Confirmar</button>
                         </div>
@@ -709,10 +710,97 @@ $(document).ready(function() {
         // Remover eventos antigos e garantir atribuição correta
         $(document).off('click', '#statusCancel');
         $(document).off('click', '#statusConfirm');
+        $(document).off('click', '#statusRemove');
 
         // Cancelar
         $(document).on('click', '#statusCancel', function() {
             $('#statusModal').fadeOut(180);
+        });
+        
+        // Remover status
+        $(document).on('click', '#statusRemove', async function() {
+            const table = $('#tasksTable').DataTable();
+            const taskId = $('#tasksTable .action-btn.status-change.active').data('id');
+            let rowIdx = null;
+            table.rows().every(function(idx, tableLoop, rowLoop) {
+                if (this.data().tarefa == taskId) rowIdx = idx;
+            });
+            if (rowIdx === null) return;
+            const rowData = table.row(rowIdx).data();
+            
+            // Remove o status de integração (define como vazio/null)
+            rowData.status_integracao = '';
+            
+            // Força o redesenho da tabela
+            table.row(rowIdx).data(rowData).draw(false);
+            $('#statusModal').fadeOut(180);
+
+            // Monta o XML para remover o status (campo vazio)
+            const headers = {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            };
+            const xml = `<schedule>\n  <customFields>\n<situacao><alternativeIdentifier></alternativeIdentifier></situacao>\n  </customFields>\n</schedule>`;
+            const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${rowData.tarefa}.xml`;
+            
+            try {
+                // Primeiro endpoint - schedule
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: 'data=' + encodeURIComponent(xml)
+                });
+                
+                // Segundo endpoint - serviceLocal (se loc_id estiver disponível)
+                let serviceLocalResponse = null;
+                if (rowData.loc_id) {
+                    const serviceLocalXml = `<serviceLocal>\n  <customFields>\n<situacao><alternativeIdentifier></alternativeIdentifier></situacao>\n  </customFields>\n</serviceLocal>`;
+                    const serviceLocalUrl = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/serviceLocal/${rowData.loc_id}.xml`;
+                    
+                    serviceLocalResponse = await fetch(serviceLocalUrl, {
+                        method: 'POST',
+                        headers: headers,
+                        body: 'data=' + encodeURIComponent(serviceLocalXml)
+                    });
+                }
+                
+                if (response.ok && (!serviceLocalResponse || serviceLocalResponse.ok)) {
+                    // Atualiza também na tabela dbout_tmp_local2
+                    try {
+                        const updateFormData = new FormData();
+                        updateFormData.append('atualizar_status', '1');
+                        updateFormData.append('loc_id', rowData.loc_id);
+                        updateFormData.append('novo_status', ''); // Status vazio
+                        
+                        const updateResponse = await fetch('server.php', {
+                            method: 'POST',
+                            body: updateFormData
+                        });
+                        
+                        const updateResult = await updateResponse.json();
+                        
+                        if (updateResult.success) {
+                            showToast('Status removido com sucesso na base de dados!', 'success');
+                            
+                            // Atualiza a linha com os dados corretos do banco
+                            if (updateResult.dados_atualizados) {
+                                console.log('Dados atualizados do banco:', updateResult.dados_atualizados);
+                                rowData.status_integracao = updateResult.dados_atualizados.e_situacao || '';
+                                table.row(rowIdx).data(rowData).draw(false);
+                                console.log('Linha atualizada com status removido:', rowData.status_integracao);
+                            }
+                        } else {
+                            showToast('Status removido, mas erro ao atualizar na base de dados.', 'error');
+                        }
+                    } catch (updateError) {
+                        console.error('Erro ao atualizar na base de dados:', updateError);
+                        showToast('Status removido, mas erro ao atualizar na base de dados.', 'error');
+                    }
+                } else {
+                    showToast('Status removido, mas houve erro ao enviar o XML.', 'error');
+                }
+            } catch (e) {
+                showToast('Status removido, mas houve erro ao enviar o XML.', 'error');
+            }
         });
         // Confirmar
         $(document).on('click', '#statusConfirm', async function() {
