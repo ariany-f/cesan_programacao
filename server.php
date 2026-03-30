@@ -4,6 +4,12 @@ header('Content-Type: application/json; charset=utf-8');
 // Inclui o arquivo de configuração
 require_once 'config.php';
 
+global $DB_LOCAL_MV, $DB_LOCAL_OVERRIDES;
+
+// Expressões SQL: valor efetivo (MV + fallback na tabela de overrides)
+$SQL_EFF_STATUS = "COALESCE(NULLIF(TRIM(l.e_situacao), ''), ls.e_situacao)";
+$SQL_EFF_TAGS = "COALESCE(NULLIF(TRIM(l.e_tag), ''), ls.e_tag)";
+
 // Parâmetros do DataTables
 $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
 $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
@@ -26,8 +32,8 @@ $colMap = [
     'tarefa' => 't.tsk_id',
     'prioridade' => 't.tsk_priority',
     'servico' => 'tt.tty_description',
-    'tags' => 'l.e_tag',
-    'status_integracao' => 'l.e_situacao',
+    'tags' => $SQL_EFF_TAGS,
+    'status_integracao' => $SQL_EFF_STATUS,
     'informacao_solicitante' => 'l.e_informacaosolicitante',
     'esclarecimento_solicitante' => 'l.e_esclarecimentosolicitante',
     'ref_localizacao' => 'l.e_reflocalizacao'
@@ -79,15 +85,15 @@ if ($activeTab) {
         case 'notas-para-baixar':
             // NOTAS PARA BAIXAR: situação = "RETORNADA DE CAMPO" E status_integracao vazio ou NULL
             $where[] = "t.tsk_situation = 'Retornada de Campo'";
-            $where[] = "(l.e_situacao IS NULL OR l.e_situacao = '')";
+            $where[] = "($SQL_EFF_STATUS IS NULL OR TRIM(COALESCE($SQL_EFF_STATUS::text, '')) = '')";
             break;
         case 'notas-baixadas':
             // NOTAS BAIXADAS: status_integracao preenchido (não vazio)
-            $where[] = "(l.e_situacao IS NOT NULL AND l.e_situacao != '')";
+            $where[] = "($SQL_EFF_STATUS IS NOT NULL AND TRIM(COALESCE($SQL_EFF_STATUS::text, '')) <> '')";
             break;
         case 'com-tags':
             // COM TAGS: somente registros com tag preenchida
-            $where[] = "(l.e_tag IS NOT NULL AND TRIM(l.e_tag) <> '')";
+            $where[] = "($SQL_EFF_TAGS IS NOT NULL AND TRIM(COALESCE($SQL_EFF_TAGS::text, '')) <> '')";
             break;
     }
 }
@@ -95,7 +101,7 @@ if ($activeTab) {
 // Inicializa o filtro de cidade da CTE
 $cidadesAtivas = getCidadesAtivas();
 // Inicializa o filtro de cidade da CTE
-$cidadeWhereCTE = getCidadeWhereCondition('u45468.dbout_tmp_local2');
+$cidadeWhereCTE = getCidadeWhereCondition($DB_LOCAL_MV);
 
 // Filtro fixo para situação baseado na configuração - REMOVIDO para permitir filtro livre no frontend
 // $situacaoWhere = getSituacaoWhereCondition('t');
@@ -154,7 +160,7 @@ if (!empty($_POST['columns'])) {
                 $cidadeFiltrada = $searchVal;
                 // Verifica se a cidade filtrada está entre as disponíveis no config
                 if (in_array($cidadeFiltrada, $cidadesAtivas)) {
-                    $cidadeWhereCTE = "u45468.dbout_tmp_local2.e_localidade = '$cidadeFiltrada'";
+                    $cidadeWhereCTE = "{$DB_LOCAL_MV}.e_localidade = '$cidadeFiltrada'";
                 }
                 // Se não estiver nas cidades configuradas, mantém o filtro original
             } else if ($colName == 'rua' || $colName == 'numero') {
@@ -188,7 +194,7 @@ if (isset($_GET['agentes'])) {
         $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
         ]);
-        $sql = "SELECT age_name, age_id, age_login FROM u45468.dbout_agent WHERE age_active = '1' ORDER BY age_login";
+        $sql = "SELECT age_name, age_id, age_login FROM u45468.agent WHERE age_active = '1' ORDER BY age_login";
         $stmt = $pdo->query($sql);
         $agentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($agentes, JSON_UNESCAPED_UNICODE);
@@ -377,7 +383,7 @@ if (isset($_POST['excluir_item'])) {
     exit;
 }
 
-// Endpoint para atualizar status na tabela dbout_tmp_local2
+// Endpoint para gravar status na tabela de overrides (MV não aceita UPDATE)
 if (isset($_POST['atualizar_status'])) {
     try {
         $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
@@ -387,41 +393,36 @@ if (isset($_POST['atualizar_status'])) {
         $locId = $_POST['loc_id'];
         $novoStatus = $_POST['novo_status'];
         
-        // Atualiza o status na tabela dbout_tmp_local2
-        $sql = "UPDATE u45468.dbout_tmp_local2 
-                SET e_situacao = :novo_status 
-                WHERE loc_id = :loc_id";
+        $sql = "INSERT INTO {$DB_LOCAL_OVERRIDES} (loc_id, e_situacao)
+                VALUES (:loc_id, :novo_status)
+                ON CONFLICT (loc_id) DO UPDATE 
+                    SET e_situacao = EXCLUDED.e_situacao";
         
         $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':novo_status', $novoStatus);
-        $stmt->bindValue(':loc_id', $locId);
+        $stmt->bindValue(':novo_status', $novoStatus, PDO::PARAM_STR);
+        $stmt->bindValue(':loc_id', $locId, PDO::PARAM_INT);
         $stmt->execute();
         
-        if ($stmt->rowCount() > 0) {
-            // Busca os dados atualizados para retornar
-            $sqlSelect = "SELECT e_situacao FROM u45468.dbout_tmp_local2 WHERE loc_id = :loc_id";
-            $stmtSelect = $pdo->prepare($sqlSelect);
-            $stmtSelect->bindValue(':loc_id', $locId);
-            $stmtSelect->execute();
-            $dadosAtualizados = $stmtSelect->fetch(PDO::FETCH_ASSOC);
-            
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Status atualizado na base de dados com sucesso!',
-                'dados_atualizados' => $dadosAtualizados
-            ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Registro não encontrado']);
-        }
+        $sqlSelect = "SELECT e_situacao FROM {$DB_LOCAL_OVERRIDES} WHERE loc_id = :loc_id";
+        $stmtSelect = $pdo->prepare($sqlSelect);
+        $stmtSelect->bindValue(':loc_id', $locId, PDO::PARAM_INT);
+        $stmtSelect->execute();
+        $dadosAtualizados = $stmtSelect->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Status gravado com sucesso!',
+            'dados_atualizados' => $dadosAtualizados
+        ], JSON_UNESCAPED_UNICODE);
         
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Erro ao atualizar status: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Erro ao gravar status: ' . $e->getMessage()]);
     }
     exit;
 }
 
-// Endpoint para atualizar tags na tabela dbout_tmp_local2
+// Endpoint para gravar tags na tabela de overrides (merge com tags da MV se não houver override)
 if (isset($_POST['atualizar_tags'])) {
     try {
         $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
@@ -431,43 +432,47 @@ if (isset($_POST['atualizar_tags'])) {
         $locId = $_POST['loc_id'];
         $novaTag = $_POST['nova_tag'];
         
-        // Busca as tags atuais
-        $sqlSelect = "SELECT e_tag FROM u45468.dbout_tmp_local2 WHERE loc_id = :loc_id";
+        $sqlSelect = "SELECT e_tag FROM {$DB_LOCAL_OVERRIDES} WHERE loc_id = :loc_id";
         $stmtSelect = $pdo->prepare($sqlSelect);
-        $stmtSelect->bindValue(':loc_id', $locId);
+        $stmtSelect->bindValue(':loc_id', $locId, PDO::PARAM_INT);
         $stmtSelect->execute();
         $tagsAtuais = $stmtSelect->fetchColumn();
         
-        // Concatena a nova tag com as existentes
+        if ($tagsAtuais === false || $tagsAtuais === null || trim((string)$tagsAtuais) === '') {
+            $sqlMv = "SELECT e_tag FROM {$DB_LOCAL_MV} WHERE loc_id = :loc_id";
+            $stmtMv = $pdo->prepare($sqlMv);
+            $stmtMv->bindValue(':loc_id', $locId, PDO::PARAM_INT);
+            $stmtMv->execute();
+            $tagsAtuais = $stmtMv->fetchColumn();
+        }
+        
         $tagsArray = $tagsAtuais ? explode(',', $tagsAtuais) : [];
-        if (!in_array($novaTag, $tagsArray)) {
+        $tagsArray = array_map('trim', $tagsArray);
+        $tagsArray = array_filter($tagsArray, function ($t) { return $t !== ''; });
+        if (!in_array($novaTag, $tagsArray, true)) {
             $tagsArray[] = $novaTag;
         }
         $tagsConcatenadas = implode(',', $tagsArray);
         
-        // Atualiza as tags na tabela dbout_tmp_local2
-        $sql = "UPDATE u45468.dbout_tmp_local2 
-                SET e_tag = :tags 
-                WHERE loc_id = :loc_id";
+        $sql = "INSERT INTO {$DB_LOCAL_OVERRIDES} (loc_id, e_tag)
+                VALUES (:loc_id, :tags)
+                ON CONFLICT (loc_id) DO UPDATE
+                    SET e_tag = EXCLUDED.e_tag";
         
         $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':tags', $tagsConcatenadas);
-        $stmt->bindValue(':loc_id', $locId);
+        $stmt->bindValue(':tags', $tagsConcatenadas, PDO::PARAM_STR);
+        $stmt->bindValue(':loc_id', $locId, PDO::PARAM_INT);
         $stmt->execute();
         
-        if ($stmt->rowCount() > 0) {
-            echo json_encode([
-                'success' => true, 
-                'message' => 'Tag adicionada na base de dados com sucesso!',
-                'dados_atualizados' => ['e_tag' => $tagsConcatenadas]
-            ]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Registro não encontrado']);
-        }
+        echo json_encode([
+            'success' => true,
+            'message' => 'Tag gravada com sucesso!',
+            'dados_atualizados' => ['e_tag' => $tagsConcatenadas]
+        ], JSON_UNESCAPED_UNICODE);
         
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Erro ao atualizar tags: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Erro ao gravar tags: ' . $e->getMessage()]);
     }
     exit;
 }
@@ -480,25 +485,26 @@ try {
         PDO::ATTR_EMULATE_PREPARES => false // Usa prepared statements nativos
     ]);
     
-    // Query de contagem otimizada - usa CTE
+    // Query de contagem otimizada - usa CTE (view materializada)
     $totalSql = "WITH locais_filtrados AS (
         SELECT *
-        FROM u45468.dbout_tmp_local2
+        FROM {$DB_LOCAL_MV}
         WHERE $cidadeWhereCTE
     )
     SELECT COUNT(*) FROM u45468.task AS t
         INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id";
     $total = $pdo->query($totalSql)->fetchColumn();
 
-    // Total de registros filtrados - OTIMIZADO COM CTE
+    // Total de registros filtrados - OTIMIZADO COM CTE + overrides
     $filteredSql = "WITH locais_filtrados AS (
         SELECT *
-        FROM u45468.dbout_tmp_local2
+        FROM {$DB_LOCAL_MV}
         WHERE $cidadeWhereCTE
     )
     SELECT COUNT(DISTINCT t.tsk_id) FROM u45468.task AS t
         INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
-        LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+        LEFT JOIN {$DB_LOCAL_OVERRIDES} AS ls ON ls.loc_id = l.loc_id
+        LEFT JOIN u45468.agent AS a ON t.age_id = a.age_id
         INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id";
     
     // Adiciona outros filtros se existirem
@@ -525,11 +531,11 @@ try {
         $filteredTotal = $filteredStmt->fetchColumn();
     }
 
-    // Query principal com paginação - OTIMIZADA COM CTE
+    // Query principal com paginação - CTE na MV + fallback local_status
     $sql = <<<SQL
 WITH locais_filtrados AS (
     SELECT *
-    FROM u45468.dbout_tmp_local2
+    FROM {$DB_LOCAL_MV}
     WHERE $cidadeWhereCTE
 )
 SELECT
@@ -546,11 +552,11 @@ SELECT
     t.tsk_situation AS "situacao",
     t.tsk_id AS "tarefa",
     tt.tty_description AS "servico",
-    l.e_tag AS "tags",
+    $SQL_EFF_TAGS AS "tags",
     l.e_reflocalizacao AS "ref_localizacao",
     l.e_informacaosolicitante AS "informacao_solicitante",
     l.e_esclarecimentosolicitante AS "esclarecimento_solicitante",
-    COALESCE(l.e_situacao, NULL) AS "status_integracao",
+    $SQL_EFF_STATUS AS "status_integracao",
     CASE 
         WHEN t.tss_id = 50 THEN CONCAT('https://consglobalmetropole.umov.me/CenterWeb/report/schedule/', t.tsk_id, '/', t.tsk_accesstoken)
         ELSE NULL
@@ -559,7 +565,8 @@ SELECT
     COALESCE(COUNT(m.ID), 0) AS "numero_itens"
 FROM u45468.task AS t
 INNER JOIN locais_filtrados AS l ON l.loc_id = t.loc_id
-LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+LEFT JOIN {$DB_LOCAL_OVERRIDES} AS ls ON ls.loc_id = l.loc_id
+LEFT JOIN u45468.agent AS a ON t.age_id = a.age_id
 INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id
 LEFT JOIN MaterialSS AS m ON m.NumeroSS = l.loc_integrationid
 SQL;
@@ -576,8 +583,8 @@ SQL;
         }
     }
 
-    // Adiciona GROUP BY para o contador de itens
-    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_reflocalizacao, l.e_informacaosolicitante, l.e_esclarecimentosolicitante, l.e_situacao, t.tsk_priority, t.tsk_accesstoken";
+    // Adiciona GROUP BY para o contador de itens (inclui colunas de ls usadas no SELECT via COALESCE)
+    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_reflocalizacao, l.e_informacaosolicitante, l.e_esclarecimentosolicitante, l.e_situacao, ls.e_tag, ls.e_situacao, t.tsk_priority, t.tsk_accesstoken";
 
     // Aplica a ordenação solicitada pelo usuário
     $sql .= "\n$orderBy";
