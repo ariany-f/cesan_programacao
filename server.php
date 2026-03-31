@@ -7,8 +7,8 @@ require_once 'config.php';
 global $DB_LOCAL_MV, $DB_LOCAL_OVERRIDES;
 
 // Expressões SQL: valor efetivo (MV + fallback na tabela de overrides)
-$SQL_EFF_STATUS = "COALESCE(NULLIF(TRIM(l.e_situacao), ''), ls.e_situacao)";
-$SQL_EFF_TAGS = "COALESCE(NULLIF(TRIM(l.e_tag), ''), ls.e_tag)";
+$SQL_EFF_STATUS = "COALESCE(ls.e_situacao, NULLIF(TRIM(l.e_situacao), ''))";
+$SQL_EFF_TAGS = "COALESCE(ls.e_tag, NULLIF(TRIM(l.e_tag), ''))";
 
 // Parâmetros do DataTables
 $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
