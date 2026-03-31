@@ -393,15 +393,22 @@ if (isset($_POST['atualizar_status'])) {
         $locId = $_POST['loc_id'];
         $novoStatus = $_POST['novo_status'];
         
-        $sql = "INSERT INTO {$DB_LOCAL_OVERRIDES} (loc_id, e_situacao)
-                VALUES (:loc_id, :novo_status)
-                ON CONFLICT (loc_id) DO UPDATE 
-                    SET e_situacao = EXCLUDED.e_situacao";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':novo_status', $novoStatus, PDO::PARAM_STR);
-        $stmt->bindValue(':loc_id', $locId, PDO::PARAM_INT);
-        $stmt->execute();
+        $sqlUpdate = "UPDATE {$DB_LOCAL_OVERRIDES}
+                      SET e_situacao = :novo_status
+                      WHERE loc_id = :loc_id";
+        $stmtUpdate = $pdo->prepare($sqlUpdate);
+        $stmtUpdate->bindValue(':novo_status', $novoStatus, PDO::PARAM_STR);
+        $stmtUpdate->bindValue(':loc_id', $locId, PDO::PARAM_INT);
+        $stmtUpdate->execute();
+
+        if ($stmtUpdate->rowCount() === 0) {
+            $sqlInsert = "INSERT INTO {$DB_LOCAL_OVERRIDES} (loc_id, e_situacao)
+                          VALUES (:loc_id, :novo_status)";
+            $stmtInsert = $pdo->prepare($sqlInsert);
+            $stmtInsert->bindValue(':novo_status', $novoStatus, PDO::PARAM_STR);
+            $stmtInsert->bindValue(':loc_id', $locId, PDO::PARAM_INT);
+            $stmtInsert->execute();
+        }
         
         $sqlSelect = "SELECT e_situacao FROM {$DB_LOCAL_OVERRIDES} WHERE loc_id = :loc_id";
         $stmtSelect = $pdo->prepare($sqlSelect);
@@ -454,15 +461,22 @@ if (isset($_POST['atualizar_tags'])) {
         }
         $tagsConcatenadas = implode(',', $tagsArray);
         
-        $sql = "INSERT INTO {$DB_LOCAL_OVERRIDES} (loc_id, e_tag)
-                VALUES (:loc_id, :tags)
-                ON CONFLICT (loc_id) DO UPDATE
-                    SET e_tag = EXCLUDED.e_tag";
-        
-        $stmt = $pdo->prepare($sql);
-        $stmt->bindValue(':tags', $tagsConcatenadas, PDO::PARAM_STR);
-        $stmt->bindValue(':loc_id', $locId, PDO::PARAM_INT);
-        $stmt->execute();
+        $sqlUpdate = "UPDATE {$DB_LOCAL_OVERRIDES}
+                      SET e_tag = :tags
+                      WHERE loc_id = :loc_id";
+        $stmtUpdate = $pdo->prepare($sqlUpdate);
+        $stmtUpdate->bindValue(':tags', $tagsConcatenadas, PDO::PARAM_STR);
+        $stmtUpdate->bindValue(':loc_id', $locId, PDO::PARAM_INT);
+        $stmtUpdate->execute();
+
+        if ($stmtUpdate->rowCount() === 0) {
+            $sqlInsert = "INSERT INTO {$DB_LOCAL_OVERRIDES} (loc_id, e_tag)
+                          VALUES (:loc_id, :tags)";
+            $stmtInsert = $pdo->prepare($sqlInsert);
+            $stmtInsert->bindValue(':tags', $tagsConcatenadas, PDO::PARAM_STR);
+            $stmtInsert->bindValue(':loc_id', $locId, PDO::PARAM_INT);
+            $stmtInsert->execute();
+        }
         
         echo json_encode([
             'success' => true,
