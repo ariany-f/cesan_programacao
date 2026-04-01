@@ -1,6 +1,8 @@
 <?php
 require_once 'config.php';
 
+global $DB_LOCAL_MV;
+
 // Tenta carregar via autoload do composer se existir
 if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     require_once __DIR__ . '/vendor/autoload.php';
@@ -287,8 +289,8 @@ try {
             l.e_informacaosolicitante AS informacao_solicitante,
             l.e_esclarecimentosolicitante AS esclarecimento_solicitante
         FROM u45468.task AS t
-        INNER JOIN u45468.dbout_tmp_local2 AS l ON l.loc_id = t.loc_id
-        LEFT JOIN u45468.dbout_agent AS a ON t.age_id = a.age_id
+        INNER JOIN {$DB_LOCAL_MV} AS l ON l.loc_id = t.loc_id
+        LEFT JOIN u45468.agent AS a ON t.age_id = a.age_id
         INNER JOIN u45468.tasktype AS tt ON tt.tty_id = t.tty_id
         WHERE t.tsk_id = :tarefa
         $cidadeWhereSql
