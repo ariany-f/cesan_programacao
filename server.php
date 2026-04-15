@@ -260,7 +260,7 @@ if (isset($_GET['materiais'])) {
                     cev_description as nome,
                     COALESCE(i_unidade, e_unidade, 'UN') as unidade,
                     i_valorunit as valor_unitario
-                FROM u45468.dbout_customentity_mc_cadastroni 
+                FROM u45468.mv_cadastroni 
                 WHERE cev_active = '1' AND i_visivel = '1' 
                 ORDER BY cev_description ASC";
         $stmt = $pdo->query($sql);
@@ -322,7 +322,7 @@ if (isset($_POST['inserir_item'])) {
         $valorTotal = $_POST['valor_total'];
         
         // Busca o nome do material
-        $sqlMaterial = "SELECT cev_description FROM u45468.dbout_customentity_mc_cadastroni WHERE cev_id = :material_id";
+        $sqlMaterial = "SELECT cev_description FROM u45468.mv_cadastroni WHERE cev_id = :material_id";
         $stmtMaterial = $pdo->prepare($sqlMaterial);
         $stmtMaterial->bindValue(':material_id', $material);
         $stmtMaterial->execute();
