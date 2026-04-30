@@ -1091,7 +1091,7 @@ $(document).ready(function() {
                     <label for="agentSelect">Selecione o agente:</label>
                     <select id="agentSelect" style="width:100%;margin-bottom:18px;"></select>
                     <div class="custom-modal-actions">
-                        <button id="transferClearSelection" class="cancel" style="background:#f9e7e7;color:#b00;">Remover Seleção</button>
+                        <button id="transferClearSelection" class="cancel" style="background:#f9e7e7;color:#b00;">Limpar seleção</button>
                         <button id="transferCancel" class="cancel">Cancelar</button>
                         <button id="transferConfirm" class="confirm">Confirmar</button>
                     </div>
