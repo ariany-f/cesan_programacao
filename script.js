@@ -1089,9 +1089,10 @@ $(document).ready(function() {
                     <h3>Transferir tarefas</h3>
                     <div id="transferCount" style="font-size: 14px; margin-bottom: 12px; font-weight: 500;"></div>
                     <label for="agentSelect">Selecione o agente:</label>
-                    <select id="agentSelect" style="width:100%;margin-bottom:18px;"></select>
+                    <select id="agentSelect" style="width:100%;margin-bottom:8px;"></select>
+                    <p id="transferHint" style="font-size:12px;color:#666;margin:0 0 14px;">Deixe em branco e confirme para remover a equipe da(s) tarefa(s).</p>
                     <div class="custom-modal-actions">
-                        <button id="transferClearSelection" class="cancel" style="background:#f9e7e7;color:#b00;">Limpar seleção</button>
+                        <button id="transferClearSelection" class="cancel" style="background:#f9e7e7;color:#b00;">Remover seleção</button>
                         <button id="transferCancel" class="cancel">Cancelar</button>
                         <button id="transferConfirm" class="confirm">Confirmar</button>
                     </div>
@@ -1147,33 +1148,60 @@ $(document).ready(function() {
 
     $(document).on('click', '#transferConfirm', async function() {
         const agentId = $('#agentSelect').val();
-        if (!agentId) {
-            showToast('Selecione um agente!', 'error');
-            return;
-        }
         const selectedTasks = $('.select-task-checkbox:checked').map(function() { return $(this).val(); }).get();
         if (selectedTasks.length === 0) {
             showToast('Selecione pelo menos uma tarefa!', 'error');
             return;
         }
+        const removerEquipe = !agentId;
+        if (removerEquipe) {
+            const qtd = selectedTasks.length;
+            const msg = qtd === 1
+                ? 'Nenhum agente selecionado. Deseja remover a equipe desta tarefa?'
+                : `Nenhum agente selecionado. Deseja remover a equipe de ${qtd} tarefas?`;
+            if (!confirm(msg)) {
+                return;
+            }
+        }
+        const table = $('#tasksTable').DataTable();
+        const agentLabel = $('#agentSelect option:selected').text();
+        const agentNome = agentLabel.includes(' (') ? agentLabel.split(' (')[0] : agentLabel;
         // Mostra loader global
         $('#fullpageLoader').fadeIn(120);
         let success = 0, fail = 0;
         for (const tsk_id of selectedTasks) {
             const url = `https://api.umov.me/CenterWeb/api/45468e84e167aa6b65ecc1377409b17bab029f/schedule/${tsk_id}.xml`;
-            const xml = `<schedule><agent><id>${agentId}</id></agent></schedule>`;
+            const xml = removerEquipe
+                ? '<schedule><agent><id></id></agent></schedule>'
+                : `<schedule><agent><id>${agentId}</id></agent></schedule>`;
             try {
                 const resp = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'data=' + encodeURIComponent(xml)
                 });
-                if (resp.ok) success++;
-                else fail++;
+                if (resp.ok) {
+                    success++;
+                    table.rows().every(function() {
+                        const rowData = this.data();
+                        if (rowData.tarefa == tsk_id) {
+                            rowData.quem = removerEquipe ? '' : agentNome;
+                            this.data(rowData);
+                        }
+                    });
+                } else {
+                    fail++;
+                }
             } catch (e) { fail++; }
         }
         $('#fullpageLoader').fadeOut(120);
-        showToast(`Transferência concluída! Sucesso: ${success}, Falha: ${fail}`, fail === 0 ? 'success' : 'error');
+        if (success > 0) {
+            table.draw(false);
+        }
+        const toastMsg = removerEquipe
+            ? `Remoção de equipe concluída! Sucesso: ${success}, Falha: ${fail}`
+            : `Transferência concluída! Sucesso: ${success}, Falha: ${fail}`;
+        showToast(toastMsg, fail === 0 ? 'success' : 'error');
         $('#transferModal').fadeOut(180);
     });
 
