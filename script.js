@@ -51,36 +51,7 @@ $(document).ready(function() {
         });
     }
 
-    // ===== GRUPOS DE SERVIÇOS =====
-    const gruposServicos = {
-        "MANUTENÇÃO": [
-            { id: "3300", nome: "SERVIÇOS NO RAMAL DE ÁGUA" },
-            { id: "3400", nome: "SERVIÇOS NA REDE DE ÁGUA" },
-            { id: "3600", nome: "SERVIÇOS NO CAVALETE" },
-            { id: "3700", nome: "SERVIÇOS DIVERS. MANUT. ÁGUA" },
-            { id: "3760", nome: "SERVICOS DIVERSOS INTERNOS" },
-            { id: "3790", nome: "VAZAMENTO NAO VISIVEL" },
-            { id: "3800", nome: "VERIFICAÇÃO DE ABASTECIMENTO" },
-            { id: "3800", nome: "VERIFICACAO DE TURBIDEZ" },
-            { id: "3995", nome: "RECLAMACAO MANUT ÁGUA" }
-        ],
-        "COMPLEMENTAR": [
-            { id: "3900", nome: "SERVIÇOS COMPLEMENTARES" }
-        ],
-        "ASFALTO": [
-            { id: "3990", nome: "SERVICOS DE PAVIM. ASFALTICA" }
-        ],
-        "MEDIÇÃO": [
-            { id: "8000", nome: "MEDICAO DE SERVICO OPERACIONAL" }
-        ],
-        "HIDROMETRIA": [
-            { id: "5000", nome: "HIDROMETRIA" }
-        ],
-        "COMERCIAL": [
-            { id: "2320", nome: "COMERCIAL" },
-            { id: "2400", nome: "COMERCIAL" }
-        ]
-    };
+    // Serviços carregados dinamicamente via server.php?servicos=1
 
     // Função para inicializar a tabela
     function initializeTable() {
@@ -340,13 +311,25 @@ $(document).ready(function() {
                         });
                     } else if (i === 13) { // Prioridade
                         input = $('<input class="form-control" type="text" placeholder="Filtrar" style="width: 100%">');
-                    } else if (i === 14) { // Serviço Solicitado (dropdown de grupos)
-                        input = $('<select class="form-control grupo-servico-select" style="width: 100%"></select>');
-                        input.append(`<option value=''>Filtrar</option>`);
-                        Object.keys(gruposServicos).forEach(grupo => {
-                            input.append(`<option value='${grupo}'>${grupo}</option>`);
-                        });
-                        input.append(`<option value='OUTROS'>OUTROS</option>`);
+                    } else if (i === 14) { // Serviço Solicitado (dropdown carregado dinamicamente com suporte a multi-seleção Select2)
+                        input = $('<select class="form-control servico-select" multiple="multiple" style="width: 100%"></select>');
+                        fetch('server.php?servicos=1')
+                            .then(response => response.json())
+                            .then(servicos => {
+                                servicos.forEach(s => {
+                                    const option = `<option value='${s.servico}'>${s.servico}</option>`;
+                                    input.append(option);
+                                });
+                                // Inicializa Select2
+                                input.select2({
+                                    placeholder: "Filtrar",
+                                    allowClear: true,
+                                    width: '100%'
+                                });
+                            })
+                            .catch(error => {
+                                console.error('Erro ao carregar serviços:', error);
+                            });
                     } else if (i === 5) { // Cidade (dropdown) - APENAS CIDADES CONFIGURADAS
                         input = $('<select class="form-control cidade-select" style="width: 100%"></select>');
                         input.append(`<option value=''>Filtrar</option>`);
@@ -380,35 +363,13 @@ $(document).ready(function() {
                     const input = filterCell.find('input, select');
                     let searchTimeout;
                     let lastValue = input.val();
-                    if (colIdx === 14) { // Serviço Solicitado (grupo)
+                    if (Array.isArray(lastValue)) {
+                        lastValue = lastValue.join(',');
+                    }
+                    if (colIdx === 14) { // Serviço Solicitado (dropdown multi-seleção Select2)
                         input.on('change', function() {
-                            const grupo = this.value;
-                            
-                            // Se for "OUTROS", envia todas as descrições mapeadas para exclusão
-                            if (grupo === 'OUTROS') {
-                                // Coleta todas as descrições (formato "ID - NOME") de todos os grupos mapeados
-                                const todasDescricoesMapeadas = new Set();
-                                Object.keys(gruposServicos).forEach(g => {
-                                    gruposServicos[g].forEach(s => {
-                                        todasDescricoesMapeadas.add(s.id + ' - ' + s.nome);
-                                    });
-                                });
-                                // Envia como "!OUTROS:" seguido das descrições separadas por vírgula
-                                const descricoesArray = Array.from(todasDescricoesMapeadas);
-                                const value = '!OUTROS:' + descricoesArray.join(',');
-                                if (value !== lastValue) {
-                                    lastValue = value;
-                                    column.search(value).draw();
-                                }
-                                return;
-                            }
-                            
-                            let servicos = [];
-                            if (grupo && gruposServicos[grupo]) {
-                                servicos = gruposServicos[grupo].map(s => s.id + ' - ' + s.nome);
-                            }
-                            // Envia todos os serviços do grupo como string separada por vírgula
-                            const value = servicos.length > 0 ? servicos.join(',') : '';
+                            const valArray = $(this).val() || [];
+                            const value = valArray.join(',');
                             if (value !== lastValue) {
                                 lastValue = value;
                                 column.search(value).draw();

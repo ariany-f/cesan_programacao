@@ -31,7 +31,7 @@ $colMap = [
     'situacao' => 't.tsk_situation',
     'tarefa' => 't.tsk_id',
     'prioridade' => 't.tsk_priority',
-    'servico' => 'tt.tty_description',
+    'servico' => "CASE WHEN tt.tty_description LIKE tt.tty_integrationid || ' - %' THEN tt.tty_description ELSE tt.tty_integrationid || ' - ' || tt.tty_description END",
     'tags' => $SQL_EFF_TAGS,
     'status_integracao' => $SQL_EFF_STATUS,
     'informacao_solicitante' => 'l.e_informacaosolicitante',
@@ -198,6 +198,35 @@ if (isset($_GET['agentes'])) {
         $stmt = $pdo->query($sql);
         $agentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($agentes, JSON_UNESCAPED_UNICODE);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
+}
+
+// Endpoint para buscar serviços
+if (isset($_GET['servicos'])) {
+    try {
+        $pdo = new PDO(getConnectionString(), $DB_CONFIG['user'], $DB_CONFIG['pass'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        ]);
+        
+        $sql = "SELECT DISTINCT 
+                    CASE 
+                        WHEN tt.tty_description LIKE tt.tty_integrationid || ' - %' THEN tt.tty_description 
+                        ELSE tt.tty_integrationid || ' - ' || tt.tty_description 
+                    END as servico 
+                FROM u45468.task t 
+                INNER JOIN u45468.tasktype tt ON tt.tty_id = t.tty_id 
+                WHERE tt.tty_description IS NOT NULL 
+                AND tt.tty_description != '' 
+                ORDER BY servico ASC";
+        
+        $stmt = $pdo->query($sql);
+        $servicos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode($servicos, JSON_UNESCAPED_UNICODE);
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => $e->getMessage()]);
@@ -565,7 +594,7 @@ SELECT
     TO_CHAR(t.tsk_lastexecutiondatehour, 'DD/MM/YYYY') AS "ultima_atividade",
     t.tsk_situation AS "situacao",
     t.tsk_id AS "tarefa",
-    tt.tty_description AS "servico",
+    CASE WHEN tt.tty_description LIKE tt.tty_integrationid || ' - %' THEN tt.tty_description ELSE tt.tty_integrationid || ' - ' || tt.tty_description END AS "servico",
     $SQL_EFF_TAGS AS "tags",
     l.e_reflocalizacao AS "ref_localizacao",
     l.e_informacaosolicitante AS "informacao_solicitante",
@@ -598,7 +627,7 @@ SQL;
     }
 
     // Adiciona GROUP BY para o contador de itens (inclui colunas de ls usadas no SELECT via COALESCE)
-    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, l.e_tag, l.e_reflocalizacao, l.e_informacaosolicitante, l.e_esclarecimentosolicitante, l.e_situacao, ls.e_tag, ls.e_situacao, t.tsk_priority, t.tsk_accesstoken";
+    $sql .= "\nGROUP BY a.age_name, l.loc_integrationid, l.loc_description, l.e_localidade, t.tss_id, l.e_bairro, l.loc_id, l.e_setor, l.e_dataregistro, t.tsk_lastexecutiondatehour, t.tsk_situation, t.tsk_id, tt.tty_description, tt.tty_integrationid, l.e_tag, l.e_reflocalizacao, l.e_informacaosolicitante, l.e_esclarecimentosolicitante, l.e_situacao, ls.e_tag, ls.e_situacao, t.tsk_priority, t.tsk_accesstoken";
 
     // Aplica a ordenação solicitada pelo usuário
     $sql .= "\n$orderBy";

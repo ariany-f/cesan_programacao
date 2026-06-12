@@ -201,7 +201,7 @@ try {
             l.e_setor AS setor,
             TO_CHAR(t.tsk_datetimeinsert::date, 'DD/MM/YYYY') AS dt_registro,
             TO_CHAR(l.e_dataregistro::date, 'DD/MM/YYYY') AS dt_recepcao,
-            tt.tty_description AS servico,
+            CASE WHEN tt.tty_description LIKE tt.tty_integrationid || ' - %' THEN tt.tty_description ELSE tt.tty_integrationid || ' - ' || tt.tty_description END AS servico,
             l.e_reflocalizacao AS ref_localizacao,
             l.e_informacaosolicitante AS informacao_solicitante,
             l.e_esclarecimentosolicitante AS esclarecimento_solicitante
