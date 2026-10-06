@@ -3,7 +3,7 @@
         'name' => 'cesan/relatorio-pdf',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '423a7a727e7ecf0baff219782305e25f77a29487',
+        'reference' => 'effa2fcd196cc3e53972e5ab925ec708e54b9de6',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'cesan/relatorio-pdf' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '423a7a727e7ecf0baff219782305e25f77a29487',
+            'reference' => 'effa2fcd196cc3e53972e5ab925ec708e54b9de6',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
