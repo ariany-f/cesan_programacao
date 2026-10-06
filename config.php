@@ -7,6 +7,8 @@
 // Opções: 'VILA_VELHA', 'CARIACICA_VIANA', 'GUARAPARI'
 $CIDADE_CONFIG = 'CARIACICA_VIANA'; // Mude para 'VILA_VELHA' se necessário
 
+$SCHEMA = 'u46915';
+
 // CONFIGURAÇÃO DE SITUAÇÃO
 // REMOVIDO: Filtro pré-fixado de situação - agora filtrado livremente no frontend
 // $SITUACAO_CONFIG = 'RETORNADA_DE_CAMPO'; // Comentado para permitir filtro livre
